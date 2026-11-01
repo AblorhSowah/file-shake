@@ -1,0 +1,41 @@
+import os
+import pkg.mod
+import pkg.other as po
+import a1, b1
+from pkg.sub import c1, d1 as e1
+from . import rel_one
+from .. import rel_two
+from ..pkg import y
+from .sibling import z
+from m import *
+from long.mod import (
+    q1,
+    q2 as q3,
+)
+from cont.mod import r1, \
+    r2
+import x.y.z
+
+
+def lazy():
+    import indented_mod
+    return indented_mod
+
+
+try:
+    import tmod
+except ImportError:
+    tmod = None
+
+# import neg_comment
+"""
+import neg_docstring
+from neg_doc import x
+"""
+s = "import neg_string"
+t = 'from neg_str2 import q'
+u = f"import neg_fstring {s}"
+v = rb'import neg_raw_bytes'
+'''
+from neg_triple import single
+'''

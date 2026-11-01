@@ -1,0 +1,11 @@
+require_relative 'rel/one'
+require_relative "rel/double"
+require 'gem_or_lib'
+load 'script.rb'
+autoload :Thing, 'thing/file'
+# require 'neg_comment'
+=begin
+require 'neg_block'
+=end
+s = "require 'neg_string'"
+t = 'require_relative "neg_single"'

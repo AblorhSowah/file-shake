@@ -1,0 +1,11 @@
+'use strict';
+const a = require('./p-cjs-a');
+const { b, c: d } = require('./p-cjs-destructure');
+module.exports = require('./p-cjs-reexport');
+import jsDefault from './p-esm';
+import('./p-js-dynamic').then((m) => m);
+if (cond) { require('./p-conditional-require'); }
+export { z } from './p-js-export-from';
+// require('./neg-js-comment');
+/* import('./neg-js-block') */
+const str = "require('./neg-js-string')";

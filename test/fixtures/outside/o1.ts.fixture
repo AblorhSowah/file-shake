@@ -1,0 +1,2 @@
+import { o2 } from './o2';
+export const o1 = o2;

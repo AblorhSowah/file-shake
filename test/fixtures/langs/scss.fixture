@@ -1,0 +1,13 @@
+@use "p-use";
+@use "p-use-as" as alias;
+@use "p-use-with" with ($a: 1);
+@forward "p-forward";
+@import "p-scss-import";
+@import "p-scss-a", "p-scss-b";
+@use "sass:math";
+@use "pkg:neg-pkg";
+@import "~neg-tilde/x";
+@import "https://neg.example.com/x.css";
+// @import "neg-scss-line";
+/* @import "neg-scss-block"; */
+$s: "@import 'neg-scss-string'";

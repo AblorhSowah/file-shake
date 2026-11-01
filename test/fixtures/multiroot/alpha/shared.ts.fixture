@@ -1,0 +1,2 @@
+import { x } from '../beta/lib';
+export const s = x;

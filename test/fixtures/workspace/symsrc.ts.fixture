@@ -1,0 +1,2 @@
+import { b1 } from './link';
+b1();

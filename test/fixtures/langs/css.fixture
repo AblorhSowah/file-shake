@@ -1,0 +1,9 @@
+@import "p-css-one.css";
+@import url("p-css-url-quoted.css");
+@import url(p-css-url-bare.css);
+@import "p-css-list-a.css", "p-css-list-b.css";
+@import 'http://neg.example.com/a.css';
+@import url(https://neg.example.com/b.css);
+@import "//neg.cdn.example.com/c.css";
+/* @import "neg-css-comment.css"; */
+body { color: red; }

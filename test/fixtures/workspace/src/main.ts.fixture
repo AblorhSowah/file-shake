@@ -1,0 +1,3 @@
+import { helper } from './util';
+import { b1 } from '../b';
+helper(b1());

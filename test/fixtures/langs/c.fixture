@@ -1,0 +1,12 @@
+#include "local.h"
+#include <system.h>
+# include "spaced.h"
+#  include /* inline comment */ "commented.h"
+#include "dup.h"
+#include "dup.h"
+#include "sub/dir/nested.h"
+#import "neg-objc.h"
+// #include "neg-line.h"
+/* #include "neg-block.h" */
+const char *s = "#include \"neg-string.h\"";
+int main(void) { return 0; }

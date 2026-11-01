@@ -1,0 +1,4 @@
+import pkg.mod as m
+from .util import h
+m.f(); m.g()
+h(); h()

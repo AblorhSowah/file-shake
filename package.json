@@ -1,0 +1,274 @@
+{
+  "name": "file-shake",
+  "displayName": "File Shake",
+  "version": "0.1.0",
+  "publisher": "file-shake",
+  "description": "See which files are being edited, live: green for the file being changed, yellow for the files it references, shaking in proportion to activity.",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "files",
+    "activity",
+    "explorer",
+    "imports",
+    "claude",
+    "ai",
+    "live"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/file-shake.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "File watching and import resolution need a real file system."
+    }
+  },
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "fileShake.view",
+          "name": "File Shake",
+          "contextualTitle": "File Shake"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "fileShake.toggle",
+        "title": "Toggle On/Off",
+        "category": "File Shake"
+      },
+      {
+        "command": "fileShake.clear",
+        "title": "Clear",
+        "category": "File Shake"
+      },
+      {
+        "command": "fileShake.focusView",
+        "title": "Focus View",
+        "category": "File Shake"
+      },
+      {
+        "command": "fileShake.showDebugInfo",
+        "title": "Show Debug Info",
+        "category": "File Shake"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "fileShake.clear",
+          "when": "view == fileShake.view",
+          "group": "navigation"
+        },
+        {
+          "command": "fileShake.toggle",
+          "when": "view == fileShake.view",
+          "group": "navigation"
+        }
+      ]
+    },
+    "colors": [
+      {
+        "id": "fileShake.editedForeground",
+        "description": "Colour of the file being edited (Explorer decoration and File Shake view).",
+        "defaults": {
+          "dark": "#3fb950",
+          "light": "#1a7f37",
+          "highContrast": "#3fb950",
+          "highContrastLight": "#116329"
+        }
+      },
+      {
+        "id": "fileShake.referencedForeground",
+        "description": "Colour of files referenced by the file being edited (Explorer decoration and File Shake view).",
+        "defaults": {
+          "dark": "#e3b341",
+          "light": "#9a6700",
+          "highContrast": "#e3b341",
+          "highContrastLight": "#7d4e00"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "File Shake",
+      "properties": {
+        "fileShake.enable": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Enable File Shake. When off, nothing is tracked, decorated or shown."
+        },
+        "fileShake.enableAnimation": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Shake rows in the File Shake view. Colours, badges and the intensity meter are always shown. Animation is also disabled when your OS requests reduced motion."
+        },
+        "fileShake.idleTimeoutMs": {
+          "type": "number",
+          "default": 2500,
+          "minimum": 500,
+          "maximum": 60000,
+          "scope": "window",
+          "markdownDescription": "Milliseconds without edits after which a file is considered idle (shaking stops and the intensity fades to zero)."
+        },
+        "fileShake.windowMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 500,
+          "maximum": 30000,
+          "scope": "window",
+          "markdownDescription": "Length in milliseconds of the sliding window used to measure the edit rate."
+        },
+        "fileShake.maxFiles": {
+          "type": "integer",
+          "default": 40,
+          "minimum": 5,
+          "maximum": 200,
+          "scope": "window",
+          "markdownDescription": "Maximum number of files shown at once (edited files first, then the most-referenced files)."
+        },
+        "fileShake.excludeGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/dist/**",
+            "**/out/**",
+            "**/build/**",
+            "**/coverage/**",
+            "**/.next/**",
+            "**/.venv/**",
+            "**/__pycache__/**",
+            "**/.vscode-test/**",
+            "**/*.min.js",
+            "**/*.map",
+            "**/*.log",
+            "**/*.vsix",
+            "**/package-lock.json",
+            "**/yarn.lock",
+            "**/pnpm-lock.yaml"
+          ],
+          "scope": "window",
+          "markdownDescription": "Glob patterns (relative to the workspace folder) of files that are never tracked and never shown as references."
+        },
+        "fileShake.colors.edited": {
+          "type": "string",
+          "default": "",
+          "pattern": "^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})?$",
+          "scope": "window",
+          "markdownDescription": "Colour of edited files in the File Shake view (for example `#3fb950`). Empty follows the theme colour. This setting affects the webview only; Explorer colours come from `workbench.colorCustomizations` keys `fileShake.editedForeground` / `fileShake.referencedForeground`."
+        },
+        "fileShake.colors.referenced": {
+          "type": "string",
+          "default": "",
+          "pattern": "^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})?$",
+          "scope": "window",
+          "markdownDescription": "Colour of referenced files in the File Shake view (for example `#e3b341`). Empty follows the theme colour. This setting affects the webview only; Explorer colours come from `workbench.colorCustomizations` keys `fileShake.editedForeground` / `fileShake.referencedForeground`."
+        },
+        "fileShake.sensitivity": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.25,
+          "maximum": 4,
+          "scope": "window",
+          "markdownDescription": "Multiplier for how strongly rows react to activity. Higher values reach full shake with fewer edits or references."
+        },
+        "fileShake.showWhenIdle": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "markdownDescription": "Keep idle files (and the files they reference) listed after activity stops, instead of removing them a few seconds after they go idle."
+        },
+        "fileShake.decorateFolders": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Also tint the parent folders of active files in the native Explorer (a coloured name with a small dot)."
+        },
+        "fileShake.detectExternalEdits": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Track changes that do not come from typing in the focused editor (for example Claude Code, git, formatters, build tools) and label them `external`."
+        },
+        "fileShake.maxFileSizeKb": {
+          "type": "integer",
+          "default": 512,
+          "minimum": 16,
+          "maximum": 4096,
+          "scope": "window",
+          "markdownDescription": "Files larger than this many kilobytes are tracked as edited but are not scanned for references."
+        },
+        "fileShake.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Show the File Shake status bar item with the currently tracked file."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "build:prod": "node esbuild.mjs --production",
+    "watch": "node esbuild.mjs --watch",
+    "build:test": "node esbuild.mjs --tests",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/webview/tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit",
+    "lint": "eslint . && npm run typecheck",
+    "test:unit": "node --import tsx --test \"test/unit/**/*.test.ts\" \"test/webview/**/*.test.ts\"",
+    "test:integration": "npm run build && npm run build:test && node --import tsx test/integration/runTest.ts",
+    "test": "npm run test:unit && npm run test:integration",
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "package": "vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/jsdom": "30.0.0",
+    "@types/mocha": "10.0.10",
+    "@types/node": "18.19.130",
+    "@types/picomatch": "4.0.3",
+    "@types/vscode": "1.85.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.1.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "globals": "17.13.0",
+    "jsdom": "30.1.3",
+    "jsonc-parser": "3.3.1",
+    "mocha": "10.8.2",
+    "picomatch": "4.0.7",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
+  }
+}

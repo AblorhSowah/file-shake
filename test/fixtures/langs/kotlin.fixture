@@ -1,0 +1,13 @@
+package com.example.app
+
+import com.example.util.Helper
+import com.example.util.Helper as H
+import com.example.model.*
+import com.example.util.Constants.MAX
+
+// import com.neg.Line
+/* import com.neg.Block */
+val s = "import com.neg.InString"
+val tb = """
+    import com.neg.TextBlock
+    """

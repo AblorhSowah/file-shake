@@ -1,0 +1,17 @@
+<?php
+require 'inc/one.php';
+require_once __DIR__ . '/inc/two.php';
+include dirname(__FILE__) . '/inc/three.php';
+include_once("inc/four.php");
+use App\Models\User;
+use App\Services\Mailer as M;
+use App\Util\{Helper, Other};
+use function App\neg_fn;
+use const App\NEG_CONST;
+// require 'neg_line.php';
+# require 'neg_hash.php';
+/* require 'neg_block.php'; */
+$s = "require 'neg_string.php'";
+?>
+require 'neg_html_outside.php';
+<?php require 'after_close.php'; ?>

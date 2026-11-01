@@ -1,0 +1,17 @@
+package main
+
+import "single/path"
+import alias "aliased/path"
+import _ "blank/path"
+import . "dot/path"
+import (
+	"grouped/one"
+	g2 "grouped/two"
+	_ "grouped/blank"
+	"example.com/mod/pkg/v2"
+)
+
+// import "neg/line-comment"
+/* import "neg/block" */
+var s = "import \"neg/in-string\""
+var r = `import "neg/raw"`

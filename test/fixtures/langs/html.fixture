@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+<!-- <script src="neg-comment.js"></script> -->
+<link rel="stylesheet" href="p-style.css">
+<script src="p-script.js"></script>
+</head>
+<body>
+<img src='p-single-quote.png'>
+<img src=p-unquoted.png alt=x>
+<a href="p-link.html?query=1#hash">link</a>
+<img
+  alt="multi line tag"
+  src="p-multiline-tag.png">
+<a href="p-dup.html">one</a>
+<a href="p-dup.html">two</a>
+<a href="https://neg.example.com/">web</a>
+<a href="//neg.cdn.example.com/x.js">protocol relative</a>
+<a href="#neg-anchor">anchor</a>
+<a href="mailto:neg@example.com">mail</a>
+<img src="data:image/png;base64,AAAA">
+<a href="javascript:void(0)">js</a>
+</body>
+</html>

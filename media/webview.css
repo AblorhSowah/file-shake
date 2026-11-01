@@ -1,0 +1,257 @@
+/* File Shake view. Colours come from the contributed theme colours (so Explorer decorations and this
+   view agree) unless the user set fileShake.colors.* (--fs-*-override, set by the script). */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+body {
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+}
+
+#app {
+  --fs-edited: var(--fs-edited-override, var(--vscode-fileShake-editedForeground, #3fb950));
+  --fs-referenced: var(--fs-referenced-override, var(--vscode-fileShake-referencedForeground, #e3b341));
+  padding: 2px 0 6px;
+  overflow-x: hidden;
+}
+
+.fs-empty {
+  padding: 8px 14px;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+  line-height: 1.45;
+}
+
+ul.fs-tree,
+ul.fs-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.fs-children {
+  padding-left: 12px;
+}
+
+ul.fs-children[hidden] {
+  display: none;
+}
+
+/* ---- folders ---------------------------------------------------------------- */
+
+.fs-folder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 1px 8px 1px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fs-folder-toggle:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.fs-folder-toggle:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.fs-chevron {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin: 0 4px 0 2px;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  opacity: 0.8;
+  transition: transform 0.12s;
+}
+
+.fs-folder[aria-expanded="true"] > .fs-folder-toggle > .fs-chevron {
+  transform: rotate(90deg);
+}
+
+.fs-folder-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-folder-count {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+/* the role dot stays visible when the folder is collapsed */
+.fs-folder[data-top-role] > .fs-folder-toggle > .fs-folder-count::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fs-referenced);
+}
+
+.fs-folder[data-top-role="edited"] > .fs-folder-toggle > .fs-folder-count::before {
+  background: var(--fs-edited);
+}
+
+/* ---- rows ------------------------------------------------------------------- */
+
+.fs-row {
+  --fs-amp: 0px;
+  --fs-dur: 160ms;
+  --fs-rot: 0deg;
+  --fs-level: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 4px 1px 2px;
+  padding: 2px 6px 2px 5px;
+  border-left: 3px solid var(--fs-row-color);
+  border-radius: 2px;
+  cursor: pointer;
+  /* never colour alone: badge text and the meter carry the meaning too */
+  --fs-row-color: var(--fs-referenced);
+}
+
+.fs-row--edited {
+  --fs-row-color: var(--fs-edited);
+}
+
+.fs-row--referenced {
+  --fs-row-color: var(--fs-referenced);
+}
+
+.fs-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.fs-row:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.fs-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fs-row-color);
+  font-weight: 600;
+}
+
+.fs-dir {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+  opacity: 0.6;
+  direction: rtl;
+  text-align: left;
+}
+
+.fs-badge {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--fs-row-color);
+  border-radius: 9px;
+  color: var(--fs-row-color);
+  font-size: 0.8em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.fs-meter {
+  flex: none;
+  width: 26px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+  overflow: hidden;
+}
+
+.fs-meter > i {
+  display: block;
+  height: 100%;
+  width: calc(var(--fs-level) * 100%);
+  background: var(--fs-row-color);
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+
+/* ---- motion ----------------------------------------------------------------- */
+
+@keyframes fs-shake {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(var(--fs-amp) * -1), calc(var(--fs-amp) * 0.4)) rotate(calc(var(--fs-rot) * -1));
+  }
+  50% {
+    transform: translate(calc(var(--fs-amp) * 0.9), calc(var(--fs-amp) * -0.5)) rotate(calc(var(--fs-rot) * 1));
+  }
+  75% {
+    transform: translate(calc(var(--fs-amp) * -0.6), calc(var(--fs-amp) * -0.3)) rotate(calc(var(--fs-rot) * -0.6));
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+.fs-row.is-shaking {
+  animation: fs-shake var(--fs-dur) linear infinite;
+  will-change: transform;
+}
+
+.fs-row.is-idle {
+  opacity: 0.55;
+  transition: opacity 0.6s;
+}
+
+.fs-row.is-leaving {
+  opacity: 0;
+  transition: opacity 400ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-row.is-shaking {
+    animation: none !important;
+  }
+  .fs-chevron,
+  .fs-meter > i {
+    transition: none;
+  }
+}
+
+#app[data-motion="off"] .fs-row,
+#app[data-motion="off"] .fs-row.is-shaking {
+  animation: none !important;
+}
+
+/* ---- high contrast ------------------------------------------------------------ */
+
+body.vscode-high-contrast .fs-row,
+body.vscode-high-contrast-light .fs-row {
+  outline: 1px solid var(--vscode-contrastBorder);
+}

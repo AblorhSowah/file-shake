@@ -1,0 +1,3 @@
+import { b1, b2 } from './b';
+import './c';
+export const a = b1() + b2() + b1();

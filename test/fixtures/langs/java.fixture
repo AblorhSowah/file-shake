@@ -1,0 +1,16 @@
+package com.example.app;
+
+import com.example.util.Helper;
+import static com.example.util.Constants.MAX;
+import com.example.model.*;
+import java.util.List;
+import static com.example.util.Statics.*;
+
+// import com.neg.LineComment;
+/* import com.neg.Block; */
+public class Main {
+    String s = "import com.neg.InString;";
+    String tb = """
+        import com.neg.TextBlock;
+        """;
+}

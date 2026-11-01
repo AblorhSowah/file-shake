@@ -1,0 +1,19 @@
+mod child;
+pub mod pubchild;
+mod inline_mod {
+    pub fn f() {}
+}
+use crate::a::b::{C, D as E};
+use self::sib::F;
+use super::up::G;
+pub use crate::re::exported::H;
+use std::collections::HashMap;
+use serde::Serialize;
+// mod neg_line;
+/* use crate::neg::block; /* nested */ use crate::neg::after_nested; */
+fn takes<'a>(x: &'a str) -> &'a str { x }
+mod after_lifetime;
+let s = "mod neg_string;";
+let r = r#"use crate::neg::raw;"#;
+let ch = 'x';
+mod after_char;

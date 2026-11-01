@@ -1,0 +1,21 @@
+# Title
+
+See [inline](./p-inline.md) and ![image](./p-image.png).
+
+[ref]: ./p-ref-def.md
+[with query](./p-query.md?x=1#frag)
+[angle](<./p-angle.md>)
+[web](https://neg.example.com)
+[anchor](#neg-anchor)
+[mail](mailto:neg@example.com)
+`[inline code](./neg-inline-code.md)`
+
+```js
+[x](./neg-fenced.md)
+```
+
+~~~
+[y](./neg-tilde-fence.md)
+~~~
+
+<!-- [c](./neg-comment.md) -->

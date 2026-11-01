@@ -1,0 +1,7 @@
+@import "p-less-one";
+@import (css) "p-less-css";
+@import (reference) "p-less-ref";
+@import url("p-less-url");
+@import "http://neg.example.com/x.less";
+// @import "neg-less-line";
+/* @import "neg-less-block"; */

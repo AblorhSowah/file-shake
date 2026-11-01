@@ -1,0 +1,37 @@
+// File Shake parser fixture: TypeScript. Specifiers './p-*' are positives; './neg-*' must never be reported.
+import Dflt from './p-default';
+import Dflt2, { a1, b1 as c1, type T1 } from './p-mixed';
+import * as ns from './p-namespace';
+import './p-side-effect';
+import type { OnlyType } from './p-type-only';
+import legacy = require('./p-import-equals');
+export { reA } from './p-export-from';
+export * from './p-export-star';
+export * as exNs from './p-export-star-as';
+export type { ReT } from './p-export-type';
+const req1 = require('./p-require-const');
+let { r2a, r2b: r2c } = require('./p-require-destructure');
+var r3 = require("./p-require-var-double");
+foo(require('./p-require-inline'));
+const lazy = import('./p-dynamic');
+const tpl = `x ${require('./p-in-template-expr')} y`;
+import {
+  m1,
+  m2 as m3,
+} from './p-multiline';
+import bare from 'lodash';
+import nodePath from 'node:path';
+const re2 = /'/; const afterRegex = import('./p-after-regex');
+const div = total / 2; const afterDivision = require('./p-after-division');
+
+// import NegLine from './neg-line-comment';
+/* import NegBlock from './neg-block-comment';
+   require('./neg-block-require'); */
+const s1 = "import x from './neg-in-string'";
+const s2 = 'require("./neg-in-single-string")';
+const t1 = `import('./neg-in-template')`;
+const t2 = `${1 + 1} text require('./neg-template-text')`;
+const d1 = import(`./neg-dynamic-${suffix}`);
+const d2 = require(variableName);
+const nr = myrequire('./neg-not-require');
+const notReallyImport = 1; // import './neg-trailing-comment';
