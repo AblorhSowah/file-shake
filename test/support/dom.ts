@@ -149,12 +149,29 @@ export function rowById(root: ParentNode, id: string): HTMLElement | undefined {
   return rowEls(root).find((el) => el.getAttribute('data-id') === id);
 }
 
+/** Real folders only: the two per-user sections ("You", "External") are li.fs-folder[data-actor] and not counted. */
 export function folderEls(root: ParentNode): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>('li.fs-folder')];
+  return [...root.querySelectorAll<HTMLElement>('li.fs-folder:not([data-actor])')];
+}
+
+/** The per-user sections that currently exist, in DOM order. */
+export function actorEls(root: ParentNode): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('li.fs-folder[data-actor]')];
+}
+
+/** Folder ids are namespaced per user ("@you/src"); tests may pass the bare id ("src") to mean the first match. */
+export function bareFolderId(id: string): string {
+  return id.replace(/^@(you|external)\//, '');
 }
 
 export function folderById(root: ParentNode, id: string): HTMLElement | undefined {
-  return folderEls(root).find((el) => el.getAttribute('data-folder-id') === id);
+  const all = folderEls(root);
+  return all.find((el) => el.getAttribute('data-folder-id') === id) ?? all.find((el) => bareFolderId(el.getAttribute('data-folder-id') ?? '') === id);
+}
+
+/** The list that holds a user's top-level folders and files (what used to be ul.fs-tree itself). */
+export function treeOf(root: ParentNode, actor: 'you' | 'external' = 'you'): HTMLElement | undefined {
+  return actorEls(root).find((el) => el.getAttribute('data-actor') === actor)?.querySelector<HTMLElement>(':scope > ul.fs-children') ?? undefined;
 }
 
 export function text(el: Element | null | undefined, selector: string): string {

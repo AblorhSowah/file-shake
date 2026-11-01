@@ -115,8 +115,9 @@ describe('dist/webview.js executed in a page built by buildWebviewHtml', () => {
     if (!haveBundle) return t.skip(skipReason);
     const p = load();
     p.send(snapshotOf([viewRow('/ws/src/a.ts', { folderPath: ['src'], dir: 'src' })], { seq: 1 }));
-    must(p.root().querySelector('button.fs-folder-toggle')).dispatchEvent(new p.dom.window.MouseEvent('click', { bubbles: true }));
-    assert.deepEqual(plain(p.stateWrites.slice(-1)), [{ collapsed: ['src'] }]);
+    // folder ids are namespaced per user: the src folder of the "You" section is "@you/src"
+    must(p.root().querySelector('li.fs-folder[data-folder-id="@you/src"] > button.fs-folder-toggle')).dispatchEvent(new p.dom.window.MouseEvent('click', { bubbles: true }));
+    assert.deepEqual(plain(p.stateWrites.slice(-1)), [{ collapsed: ['@you/src'] }]);
   });
 
   it('restores collapsed folders from vscode.getState, ignoring junk state', (t) => {
@@ -127,9 +128,10 @@ describe('dist/webview.js executed in a page built by buildWebviewHtml', () => {
       assert.equal(p.root().getAttribute('data-state'), 'rows', JSON.stringify(junk));
       p.dom.window.close();
     }
-    const p = load({ collapsed: ['src', 5, 'lib'] });
+    const p = load({ collapsed: ['@you/src', 5, 'lib'] });
     p.send(snapshotOf([viewRow('/ws/src/a.ts', { folderPath: ['src'], dir: 'src' })], { seq: 1 }));
-    assert.equal(must(p.root().querySelector('li.fs-folder')).getAttribute('aria-expanded'), 'false', 'a restored collapsed folder stays collapsed after the first snapshot');
+    assert.equal(must(p.root().querySelector('li.fs-folder[data-folder-id="@you/src"]')).getAttribute('aria-expanded'), 'false', 'a restored collapsed folder stays collapsed after the first snapshot');
+    assert.equal(must(p.root().querySelector('li.fs-folder[data-folder-id="@you"]')).getAttribute('aria-expanded'), 'true', 'the user section itself was not collapsed');
   });
 
   it('ignores malformed window messages (other extensions, devtools, garbage)', (t) => {

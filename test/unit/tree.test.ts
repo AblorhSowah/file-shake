@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTree } from '../../src/core/tree';
+import { ACTOR_LABEL, buildActorTree, buildTree } from '../../src/core/tree';
 import type { FileNode, FolderNode, TreeNode } from '../../src/core/tree';
 import { viewRow } from '../support/builders';
 import { must } from '../support/fixtures';
@@ -199,5 +199,61 @@ describe('buildTree', () => {
     assert.equal(seen.length, 500);
     assert.equal(new Set(seen).size, 500);
     assert.ok(elapsed < 200, `buildTree took ${elapsed.toFixed(1)}ms`);
+  });
+});
+
+describe('buildActorTree: one section per user', () => {
+  it('has no sections when there are no rows', () => {
+    assert.deepEqual(buildActorTree([]), []);
+  });
+
+  it('puts You before External and leaves out a user with no rows', () => {
+    const both = buildActorTree([r('/ws/e.ts', { actor: 'external', source: 'external' }), r('/ws/m.ts')]);
+    assert.deepEqual(both.map((n) => n.id), ['@you', '@external']);
+    assert.deepEqual(buildActorTree([r('/ws/e.ts', { actor: 'external', source: 'external' })]).map((n) => n.id), ['@external']);
+    assert.deepEqual(buildActorTree([r('/ws/m.ts')]).map((n) => n.id), ['@you']);
+  });
+
+  it('a section is a folder node with the user\'s label, actor, file count, top role and activity', () => {
+    const tree = buildActorTree([
+      r('/ws/a.ts', { phase: 'idle' }),
+      r('/ws/src/b.ts', { folderPath: ['src'], dir: 'src', role: 'referenced', source: null, phase: 'active' }),
+    ]);
+    const you = folder(tree[0]);
+    assert.equal(you.label, ACTOR_LABEL.you);
+    assert.equal(you.actor, 'you');
+    assert.equal(you.fileCount, 2);
+    assert.equal(you.topRole, 'edited');
+    assert.equal(you.hasActive, true);
+  });
+
+  it('a user whose rows are all yellow has topRole "referenced"; all idle means no activity', () => {
+    const tree = buildActorTree([r('/ws/x.ts', { role: 'referenced', source: null, phase: 'idle', actor: 'external' })]);
+    const ext = folder(tree[0]);
+    assert.equal(ext.topRole, 'referenced');
+    assert.equal(ext.hasActive, false);
+    assert.equal(ext.actor, 'external');
+  });
+
+  it('folder ids inside a section carry the section prefix, so the same folder under two users never collides', () => {
+    const tree = buildActorTree([
+      r('/ws/src/a.ts', { folderPath: ['src'], dir: 'src' }),
+      r('/ws/src/b.ts', { folderPath: ['src'], dir: 'src', actor: 'external', source: 'external' }),
+    ]);
+    assert.equal(folder(folder(tree[0]).children[0]).id, '@you/src');
+    assert.equal(folder(folder(tree[1]).children[0]).id, '@external/src');
+  });
+
+  it('inside a section the tree is the ordinary compact tree (compaction, folders before files, alphabetical)', () => {
+    const tree = buildActorTree([
+      r('/ws/z.ts'),
+      r('/ws/a/b/c.ts', { folderPath: ['a', 'b'], dir: 'a/b' }),
+    ]);
+    assert.deepEqual(labels(folder(tree[0]).children), ['a/b/', 'z.ts']);
+  });
+
+  it('buildTree with no prefix is unchanged (ids are the plain path)', () => {
+    const t = buildTree([r('/ws/src/a.ts', { folderPath: ['src'], dir: 'src' })]);
+    assert.equal(folder(t[0]).id, 'src');
   });
 });

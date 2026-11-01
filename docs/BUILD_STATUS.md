@@ -2,7 +2,7 @@
 
 Maintained by the Builder after every milestone. A successor must be able to continue from this file.
 
-## Current milestone: M0..M7 done, Phase 2 QA findings fixed (QA-002..QA-006). Remaining: publish to the Marketplace (needs a publisher account), see "Release checklist" below.
+## Current milestone: 0.2.0 (persistence + two users) done on top of M0..M7 and the Phase 2 fixes (QA-002..QA-006). Remaining: publish to the Marketplace (needs a publisher account), see "Release checklist" below.
 
 ## Milestone log
 
@@ -70,6 +70,15 @@ Counting examples (1)-(4) of DESIGN 14 give 4/1, 3/3, 2, 5. Perf: 400 KB / 5000-
 - Test-side changes: `test/integration/suite/75-adversarial.single.test.ts` (QA-006 wait also accepts `burst`), `test/integration/suite/76-folders.multi.test.ts` (rewrites the probe file every 500 ms until the new folder's watcher is live; a single write raced VS Code's asynchronous watcher start and failed about half the time on the unmodified code too), `test/unit/activityTracker.test.ts` (`renameUnder` return value).
 
 ## Release checklist
-- `npm run lint`, `npm run test:unit` (1284), `FS_VSCODE_EXE=... npm run test:integration` and `FS_INSTALLED_VSIX=$PWD/file-shake-0.1.0.vsix ... node --import tsx test/integration/runTest.ts` (141 pass, 1 skipped) are green.
-- `npm run package` -> `file-shake-0.1.0.vsix` (10 files, about 52 KB). Local install: `code --install-extension file-shake-0.1.0.vsix`.
+- `npm run lint`, `npm run test:unit` (1284), `FS_VSCODE_EXE=... npm run test:integration` and `FS_INSTALLED_VSIX=$PWD/file-shake-0.2.0.vsix ... node --import tsx test/integration/runTest.ts` (141 pass, 1 skipped) are green.
+- `npm run package` -> `file-shake-0.2.0.vsix` (10 files, about 52 KB). Local install: `code --install-extension file-shake-0.2.0.vsix`.
 - Not done: `vsce publish` / Open VSX. `package.json` still has placeholders: `publisher` is `file-shake` (must be a real Marketplace publisher id you own, and the extension id becomes `<publisher>.file-shake`) and `repository.url` is `https://github.com/OWNER/file-shake.git` (the package script passes `--allow-missing-repository` because of it). Publishing also needs a personal access token. Also not done: Windows/Linux runs, VS Code 1.85 floor run.
+
+## 0.2.0: persistence and the two users
+- Spec and rules: `docs/DESIGN.md` section 15 and the last Deviations bullet.
+- Core: `ActivityTracker` (`persist`, `release`, superseded-file rule), `viewModel` (`ViewRow.actor`, per-user source cap), `tree` (`buildActorTree`, id prefix), `protocol` (`actor`), `config` (`persistUntilNextFile`).
+- Adapters: `controller` (`keepsIdle`, `onActiveEditorChanged`, `onWindowFocusChanged`, `noteOpenedFromView`), `extension` (editor and window listeners, two test seams), `shakeViewProvider` (`onOpenRow`).
+- Webview: sections rendered by the existing folder code (`data-actor`), `media/webview.css` section styles.
+- Tests: tracker persist mode (14), view model actor (5), tree sections (7), protocol actor (3), webview sections (6), integration suite `77-persistence.single` (13, real VS Code). Seven older integration tests assert timed removal and set `persistUntilNextFile` to `false` explicitly. Version pins moved to 0.2.0.
+- Checked by mutation in scratch copies (each killed by the matching tests): switching files never releases you; window blur never releases you; the view-click guard removed; an idle file never replaced by the same user's next file.
+- Release checklist above still applies; the package is now `file-shake-0.2.0.vsix`.

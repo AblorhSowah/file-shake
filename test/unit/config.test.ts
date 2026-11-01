@@ -36,6 +36,7 @@ const KEYS: Array<keyof FileShakeConfig> = [
   'referencedColor',
   'sensitivity',
   'showWhenIdle',
+  'persistUntilNextFile',
   'decorateFolders',
   'detectExternalEdits',
   'maxFileSizeKb',
@@ -52,6 +53,7 @@ describe('DEFAULT_CONFIG', () => {
     assert.equal(DEFAULT_CONFIG.sensitivity, 1);
     assert.equal(DEFAULT_CONFIG.maxFileSizeKb, 512);
     assert.equal(DEFAULT_CONFIG.showWhenIdle, false);
+    assert.equal(DEFAULT_CONFIG.persistUntilNextFile, true);
     assert.equal(DEFAULT_CONFIG.decorateFolders, true);
     assert.equal(DEFAULT_CONFIG.detectExternalEdits, true);
     assert.equal(DEFAULT_CONFIG.showStatusBar, true);
@@ -88,6 +90,7 @@ describe('sanitizeConfig', () => {
       referencedColor: '#abc',
       sensitivity: 2.5,
       showWhenIdle: true,
+      persistUntilNextFile: false,
       decorateFolders: false,
       detectExternalEdits: false,
       maxFileSizeKb: 1024,
@@ -148,6 +151,7 @@ describe('sanitizeConfig', () => {
       ['enable', true],
       ['enableAnimation', true],
       ['showWhenIdle', false],
+      ['persistUntilNextFile', true],
       ['decorateFolders', true],
       ['detectExternalEdits', true],
       ['showStatusBar', true],
@@ -274,6 +278,7 @@ describe('sanitizeConfig', () => {
       assert.equal(typeof c.enable, 'boolean');
       assert.equal(typeof c.enableAnimation, 'boolean');
       assert.equal(typeof c.showWhenIdle, 'boolean');
+      assert.equal(typeof c.persistUntilNextFile, 'boolean');
       assert.equal(typeof c.decorateFolders, 'boolean');
       assert.equal(typeof c.detectExternalEdits, 'boolean');
       assert.equal(typeof c.showStatusBar, 'boolean');
@@ -291,7 +296,7 @@ describe('sanitizeConfig', () => {
 
 describe('toTrackerOptions', () => {
   it('maps config fields and uses RETAIN_AFTER_IDLE_MS', () => {
-    const c = sanitizeConfig({ windowMs: 5000, idleTimeoutMs: 1500, maxFiles: 12, sensitivity: 2, showWhenIdle: true });
+    const c = sanitizeConfig({ windowMs: 5000, idleTimeoutMs: 1500, maxFiles: 12, sensitivity: 2, showWhenIdle: true, persistUntilNextFile: false });
     assert.deepEqual(toTrackerOptions(c), {
       windowMs: 5000,
       idleTimeoutMs: 1500,
@@ -299,11 +304,14 @@ describe('toTrackerOptions', () => {
       maxFiles: 12,
       sensitivity: 2,
       showWhenIdle: true,
+      persist: false,
     });
+    assert.equal(toTrackerOptions(sanitizeConfig({ persistUntilNextFile: true })).persist, true);
   });
 
-  it('DEFAULT_TRACKER_OPTIONS equals toTrackerOptions(DEFAULT_CONFIG) and the documented numbers', () => {
-    assert.deepEqual(toTrackerOptions(DEFAULT_CONFIG), DEFAULT_TRACKER_OPTIONS);
+  it('DEFAULT_TRACKER_OPTIONS equals toTrackerOptions(DEFAULT_CONFIG) except persistence, and the documented numbers', () => {
+    // the product default is persistence ON (config); the bare tracker keeps timed removal so its own tests stay timing-based
+    assert.deepEqual(toTrackerOptions(DEFAULT_CONFIG), { ...DEFAULT_TRACKER_OPTIONS, persist: true });
     assert.deepEqual(DEFAULT_TRACKER_OPTIONS, {
       windowMs: 3000,
       idleTimeoutMs: 2500,
@@ -311,6 +319,7 @@ describe('toTrackerOptions', () => {
       maxFiles: 40,
       sensitivity: 1,
       showWhenIdle: false,
+      persist: false,
     });
   });
 });

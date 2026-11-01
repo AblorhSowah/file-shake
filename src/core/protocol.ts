@@ -52,6 +52,7 @@ function parseRow(v: unknown): ViewRow | undefined {
   const refCount = num(v['refCount']);
   const shake = parseShake(v['shake']);
   const role = v['role'];
+  const actor = v['actor'];
   const phase = v['phase'];
   const source = v['source'];
   const folderPath = v['folderPath'];
@@ -71,6 +72,7 @@ function parseRow(v: unknown): ViewRow | undefined {
     return undefined;
   }
   if (role !== 'edited' && role !== 'referenced') return undefined;
+  if (actor !== 'you' && actor !== 'external') return undefined;
   if (phase !== 'active' && phase !== 'idle') return undefined;
   if (source !== 'you' && source !== 'external' && source !== null) return undefined;
   if (!Array.isArray(folderPath) || folderPath.length > 256) return undefined;
@@ -87,6 +89,7 @@ function parseRow(v: unknown): ViewRow | undefined {
     dir,
     folderPath: folders,
     role: role as Role,
+    actor: actor as EditSource,
     source: source as EditSource | null,
     phase: phase as Phase,
     intensity,

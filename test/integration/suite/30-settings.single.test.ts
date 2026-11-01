@@ -124,6 +124,7 @@ suite('Settings apply live (single-root workspace)', () => {
 
   test('showWhenIdle=true keeps idle rows (and their decorations) past the retain window', async function () {
     this.timeout(60_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     await setConfig('showWhenIdle', true);
     const a = join(ws, 'a.ts');
     await typeAndWait(api, await openDoc(a));

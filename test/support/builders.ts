@@ -56,6 +56,8 @@ export function viewRow(key: FileKey, o: Partial<ViewRow> = {}): ViewRow {
     dir: relDir,
     folderPath: relDir === '' ? [] : relDir.split('/'),
     role: 'edited',
+    // the user a row is listed under follows its source unless a test says otherwise
+    actor: o.source === 'external' ? 'external' : 'you',
     source: 'you',
     phase: 'active',
     intensity: 0.5,

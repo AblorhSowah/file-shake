@@ -11,6 +11,11 @@ export interface TrackerOptions {
   maxFiles: number;
   sensitivity: number;
   showWhenIdle: boolean;
+  /**
+   * Keep each actor's current files until that actor moves on: idle files are never removed by time, and a
+   * file leaves only when the same actor starts on a different file (or the actor is released).
+   */
+  persist: boolean;
 }
 
 export const DEFAULT_TRACKER_OPTIONS: TrackerOptions = {
@@ -20,6 +25,7 @@ export const DEFAULT_TRACKER_OPTIONS: TrackerOptions = {
   maxFiles: 40,
   sensitivity: 1,
   showWhenIdle: false,
+  persist: false,
 };
 
 export interface EditInput {
@@ -38,6 +44,8 @@ interface Entry {
   lastEditAt: number;
   lastExternalAt: number | undefined;
   editCount: number;
+  /** persist mode: the actor moved on; this entry leaves as soon as it is idle (or at once if it already is) */
+  released: boolean;
 }
 
 /** Sliding-window edit tracker. Pure: time comes from the injected clock. */
@@ -81,6 +89,7 @@ export class ActivityTracker {
         lastEditAt: at,
         lastExternalAt: undefined,
         editCount: 0,
+        released: false,
       };
       this.entries.set(input.key, entry);
     }
@@ -90,14 +99,36 @@ export class ActivityTracker {
     entry.lastEditAt = Math.max(entry.lastEditAt, at);
     if (input.source === 'external') entry.lastExternalAt = at;
     entry.editCount += 1;
+    entry.released = false;
     this.prune(entry, now);
+    if (this.opts.persist) this.dropSuperseded(now, input.key);
     this.evictOverflow();
     return true;
+  }
+
+  /**
+   * Persist mode: the actor stops being "on" a file when it moves to another one. Marks every file of `source`
+   * as released; idle ones go now, active ones as soon as they turn idle. A new edit of a file un-releases it.
+   */
+  release(source: EditSource): number {
+    const now = this.clock.now();
+    let n = 0;
+    for (const entry of [...this.entries.values()]) {
+      if (entry.source !== source) continue;
+      if (this.isIdle(entry, now)) {
+        this.entries.delete(entry.key);
+        n += 1;
+      } else {
+        entry.released = true;
+      }
+    }
+    return n;
   }
 
   /** Prunes and removes expired entries at clock.now(); sorted lastEditAt desc, then key asc. */
   snapshot(): TrackedFile[] {
     const now = this.clock.now();
+    if (this.opts.persist) this.dropSuperseded(now);
     const out: TrackedFile[] = [];
     for (const entry of [...this.entries.values()]) {
       const file = this.compute(entry, now);
@@ -159,7 +190,7 @@ export class ActivityTracker {
   private compute(entry: Entry, now: number): TrackedFile | undefined {
     const o = this.opts;
     const since = Math.max(0, now - entry.lastEditAt);
-    if (!o.showWhenIdle && since >= o.idleTimeoutMs + o.retainAfterIdleMs) {
+    if (!o.showWhenIdle && !o.persist && since >= o.idleTimeoutMs + o.retainAfterIdleMs) {
       this.entries.delete(entry.key);
       return undefined;
     }
@@ -182,6 +213,24 @@ export class ActivityTracker {
       lastEditAt: entry.lastEditAt,
       editCount: entry.editCount,
     };
+  }
+
+  private isIdle(entry: Entry, now: number): boolean {
+    return Math.max(0, now - entry.lastEditAt) >= this.opts.idleTimeoutMs;
+  }
+
+  /**
+   * Persist mode. An idle file stays until its actor does something else: it is dropped when the same actor has
+   * another file that is active (the actor moved on, files touched together stay together because they are all
+   * active at once), when a different file of that actor was just edited (`keep`), or when it was released.
+   */
+  private dropSuperseded(now: number, keep?: FileKey): void {
+    const activeBy = new Set<EditSource>();
+    for (const e of this.entries.values()) if (!this.isIdle(e, now)) activeBy.add(e.source);
+    for (const e of [...this.entries.values()]) {
+      if (!this.isIdle(e, now) || e.key === keep) continue;
+      if (e.released || activeBy.has(e.source)) this.entries.delete(e.key);
+    }
   }
 
   /** Drops events older than max(windowMs, idleTimeoutMs) and enforces MAX_EVENTS_PER_FILE. */

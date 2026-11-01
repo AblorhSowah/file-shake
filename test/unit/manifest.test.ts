@@ -53,7 +53,7 @@ describe('package.json: identity and platform fields', () => {
   it('identity', () => {
     assert.equal(pkg.name, 'file-shake');
     assert.equal(pkg.displayName, 'File Shake');
-    assert.equal(pkg.version, '0.1.0');
+    assert.equal(pkg.version, '0.2.0');
     assert.equal(pkg.publisher, 'file-shake');
     assert.equal(pkg.license, 'MIT');
     assert.ok(pkg.description.length > 20);
@@ -210,13 +210,14 @@ describe('package.json: configuration matches core/config defaults and ranges', 
     'fileShake.colors.referenced': 'referencedColor',
     'fileShake.sensitivity': 'sensitivity',
     'fileShake.showWhenIdle': 'showWhenIdle',
+    'fileShake.persistUntilNextFile': 'persistUntilNextFile',
     'fileShake.decorateFolders': 'decorateFolders',
     'fileShake.detectExternalEdits': 'detectExternalEdits',
     'fileShake.maxFileSizeKb': 'maxFileSizeKb',
     'fileShake.showStatusBar': 'showStatusBar',
   };
 
-  it('exactly the documented 14 settings', () => {
+  it('exactly the documented 15 settings', () => {
     assert.deepEqual(Object.keys(props).sort(), Object.keys(keyOf).sort());
   });
 
@@ -249,7 +250,7 @@ describe('package.json: configuration matches core/config defaults and ranges', 
   }
 
   it('boolean settings are booleans', () => {
-    for (const s of ['enable', 'enableAnimation', 'showWhenIdle', 'decorateFolders', 'detectExternalEdits', 'showStatusBar']) {
+    for (const s of ['enable', 'enableAnimation', 'showWhenIdle', 'persistUntilNextFile', 'decorateFolders', 'detectExternalEdits', 'showStatusBar']) {
       assert.equal(must(props[`fileShake.${s}`]).type, 'boolean', s);
     }
   });
@@ -290,8 +291,10 @@ describe('repository files required for a Marketplace-ready package', () => {
     assert.match(t, /Permission is hereby granted, free of charge/);
   });
 
-  it('CHANGELOG.md exists and mentions 0.1.0', () => {
-    assert.match(readFileSync(must_exist('CHANGELOG.md'), 'utf8'), /0\.1\.0/);
+  it('CHANGELOG.md exists and mentions 0.2.0', () => {
+    const log = readFileSync(must_exist('CHANGELOG.md'), 'utf8');
+    assert.match(log, /^## 0\.2\.0$/m);
+    assert.match(log, /^## 0\.1\.0$/m, 'the history is kept');
   });
 
   it('.vscodeignore excludes everything and un-ignores exactly the shipped files', () => {

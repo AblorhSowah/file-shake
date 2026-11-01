@@ -112,6 +112,39 @@ ul.fs-children[hidden] {
   background: var(--fs-edited);
 }
 
+/* ---- the two users: "You" (typing) and "External" (Claude, git, tools) ----------- */
+
+.fs-folder[data-actor] {
+  --fs-actor-color: var(--vscode-charts-blue, #3794ff);
+}
+
+.fs-folder[data-actor="external"] {
+  --fs-actor-color: var(--vscode-charts-purple, #b180d7);
+}
+
+.fs-folder[data-actor] > .fs-folder-toggle {
+  margin-top: 4px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+}
+
+/* a different glyph per user, the same ones as the Explorer badges, so colour is never the only cue */
+.fs-folder[data-actor] > .fs-folder-toggle > .fs-folder-label::before {
+  content: "\25CF";
+  margin-right: 6px;
+  color: var(--fs-actor-color);
+}
+
+.fs-folder[data-actor="external"] > .fs-folder-toggle > .fs-folder-label::before {
+  content: "\25C6";
+}
+
+.fs-folder[data-actor] > ul.fs-children {
+  padding-left: 4px;
+}
+
 /* ---- rows ------------------------------------------------------------------- */
 
 .fs-row {

@@ -86,6 +86,8 @@ export class ShakeController implements vscode.Disposable {
   private lastPushed = '';
   private readonly listeners = new Set<() => void>();
   private analysisKey = '';
+  /** a file the user just opened by clicking a row in our own view: that is not "moving on" from their file */
+  private openedFromView: FileKey | undefined;
   private disposed = false;
   private readonly refSub: vscode.Disposable;
 
@@ -141,6 +143,33 @@ export class ShakeController implements vscode.Disposable {
     return moved;
   }
 
+  /**
+   * The active editor changed to `key`. If it is not a file you have been typing in, you moved on: your files go
+   * (they keep shaking until idle, then leave) and the next file you type in takes their place. `undefined`
+   * (no editor, or a non-file editor) is not a move.
+   */
+  onActiveEditorChanged(key: FileKey | undefined): void {
+    if (this.disposed || key === undefined) return;
+    const fromView = this.openedFromView === key;
+    this.openedFromView = undefined;
+    if (fromView || !this.deps.getConfig().persistUntilNextFile) return;
+    if (this.tracker.get(key)?.source === 'you') return;
+    this.tracker.release('you');
+    this.refresh();
+  }
+
+  /** The VS Code window lost focus: nobody is typing in it, so your files are released like a file switch. */
+  onWindowFocusChanged(focused: boolean): void {
+    if (this.disposed || focused || !this.deps.getConfig().persistUntilNextFile) return;
+    this.tracker.release('you');
+    this.refresh();
+  }
+
+  /** A row in our own view was clicked: the editor change that follows must not release your files. */
+  noteOpenedFromView(key: FileKey): void {
+    this.openedFromView = key;
+  }
+
   /** A tsconfig/jsconfig/go.mod/composer.json changed: resolution inputs are stale. */
   onProjectFileChanged(): void {
     this.references.invalidateAll();
@@ -188,11 +217,11 @@ export class ShakeController implements vscode.Disposable {
     const tracked = cfg.enable ? this.tracker.snapshot() : [];
     this.rows = this.computeRows(cfg, tracked);
     const decorations = cfg.enable
-      ? buildDecorations(this.rows, { showWhenIdle: cfg.showWhenIdle, decorateFolders: cfg.decorateFolders })
+      ? buildDecorations(this.rows, { showWhenIdle: this.keepsIdle(cfg), decorateFolders: cfg.decorateFolders })
       : new Map<FileKey, DecorationSpec>();
     this.deps.decorations.update(decorations);
 
-    const status = buildStatus({ enabled: cfg.enable, rows: this.rows, showWhenIdle: cfg.showWhenIdle });
+    const status = buildStatus({ enabled: cfg.enable, rows: this.rows, showWhenIdle: this.keepsIdle(cfg) });
     this.statusText = status.text;
     this.deps.status.update(status, cfg.showStatusBar);
 
@@ -257,6 +286,11 @@ export class ShakeController implements vscode.Disposable {
 
   // ----------------------------------------------------------------------------
 
+  /** Idle files stay listed: either asked for explicitly, or because each user's files persist until they move on. */
+  private keepsIdle(cfg: FileShakeConfig): boolean {
+    return cfg.showWhenIdle || cfg.persistUntilNextFile;
+  }
+
   private analysisSettings(cfg: FileShakeConfig): string {
     return `${cfg.maxFileSizeKb}|${JSON.stringify(cfg.excludeGlobs)}`;
   }
@@ -269,7 +303,7 @@ export class ShakeController implements vscode.Disposable {
       toUri: (key) => uriFromKey(key).toString(),
       sensitivity: cfg.sensitivity,
       maxFiles: cfg.maxFiles,
-      showWhenIdle: cfg.showWhenIdle,
+      showWhenIdle: this.keepsIdle(cfg),
     });
   }
 
@@ -286,7 +320,7 @@ export class ShakeController implements vscode.Disposable {
 
   /** Sources whose references are on screen: active files, plus idle ones while `showWhenIdle` keeps them listed. */
   private shownSources(): Set<FileKey> {
-    const keepIdle = this.deps.getConfig().showWhenIdle;
+    const keepIdle = this.keepsIdle(this.deps.getConfig());
     return new Set(this.tracker.snapshot().filter((t) => keepIdle || t.phase === 'active').map((t) => t.key));
   }
 
@@ -313,7 +347,7 @@ export class ShakeController implements vscode.Disposable {
   private needsTick(): boolean {
     const cfg = this.deps.getConfig();
     if (!cfg.enable || this.tracker.size === 0) return false;
-    if (!cfg.showWhenIdle) return true; // idle files are still waiting to be removed
+    if (!this.keepsIdle(cfg)) return true; // idle files are still waiting to be removed
     return this.tracker.snapshot().some((t) => t.phase === 'active');
   }
 }

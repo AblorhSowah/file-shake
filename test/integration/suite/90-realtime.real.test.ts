@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import type { FileShakeApi } from '../../../src/extension';
-import { colorIdOf, decorationOf, envPath, externalWrite, getApi, keyOf, logFor, must, openDoc, rowOf, runNode, trackedOf, typeInto, waitReal, workspaceDir } from './helpers';
+import { colorIdOf, decorationOf, envPath, externalWrite, getApi, keyOf, logFor, must, openDoc, rowOf, runNode, setConfig, trackedOf, typeInto, waitReal, workspaceDir } from './helpers';
 
 suite('Real clock, real timers (no test seam)', () => {
   let api: FileShakeApi;
@@ -58,6 +58,7 @@ suite('Real clock, real timers (no test seam)', () => {
 
   test('the real tick chain keeps the status bar text and the native decorations in step with time: active -> idle -> removed', async function () {
     this.timeout(60_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     const a = join(ws, 'src', 'lib', 'deep.ts');
     const key = keyOf(a);
     const doc = await openDoc(a);

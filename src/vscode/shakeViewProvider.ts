@@ -7,6 +7,9 @@ import type { Snapshot } from '../core/types';
 export class ShakeViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   static readonly viewType = 'fileShake.view';
 
+  /** called with the file key just before a row of this view is opened in an editor */
+  onOpenRow: ((id: string) => void) | undefined;
+
   private view: vscode.WebviewView | undefined;
   private viewDisposables: vscode.Disposable[] = [];
   private latest: Snapshot | undefined;
@@ -97,6 +100,7 @@ export class ShakeViewProvider implements vscode.WebviewViewProvider, vscode.Dis
         // never trust the id as a URI: only rows from the last snapshot can be opened
         const row = this.latest?.rows.find((r) => r.id === msg.id);
         if (!row) return;
+        this.onOpenRow?.(row.id);
         Promise.resolve(vscode.window.showTextDocument(vscode.Uri.parse(row.uri), { preview: true })).catch(
           (err: unknown) => this.log(`open failed for ${row.id}: ${String(err)}`),
         );

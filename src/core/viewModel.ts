@@ -1,7 +1,7 @@
 import { K } from './constants';
 import { referenceIntensity, shakeParams } from './intensity';
 import { basename, toDisplayPath } from './pathUtils';
-import type { FileKey, ReferenceResult, TrackedFile, ViewRow, WorkspaceRoot } from './types';
+import type { EditSource, FileKey, ReferenceResult, TrackedFile, ViewRow, WorkspaceRoot } from './types';
 
 export interface ModelInput {
   tracked: readonly TrackedFile[];
@@ -15,6 +15,8 @@ export interface ModelInput {
 
 interface Contribution {
   source: FileKey;
+  actor: EditSource;
+  count: number;
   active: boolean;
 }
 
@@ -28,6 +30,7 @@ function editedRow(t: TrackedFile, i: ModelInput): ViewRow {
     dir: d.dir,
     folderPath: d.folderPath,
     role: 'edited',
+    actor: t.source,
     source: t.source,
     phase: t.phase,
     intensity: t.intensity,
@@ -46,9 +49,12 @@ export function buildRows(i: ModelInput): ViewRow[] {
 
   const edited = tracked.slice(0, maxFiles).map((t) => editedRow(t, i));
 
-  const sources = tracked
-    .filter((t) => t.phase === 'active' || i.showWhenIdle)
-    .slice(0, K.MAX_REFERENCE_SOURCES);
+  // the cap on analysed sources applies to each user separately, so one user's burst cannot hide the other's references
+  const sources = (['you', 'external'] as const).flatMap((actor) =>
+    tracked
+      .filter((t) => t.source === actor && (t.phase === 'active' || i.showWhenIdle))
+      .slice(0, K.MAX_REFERENCE_SOURCES),
+  );
 
   const counts = new Map<FileKey, number>();
   const contributions = new Map<FileKey, Contribution[]>();
@@ -59,7 +65,7 @@ export function buildRows(i: ModelInput): ViewRow[] {
       if (target.key === src.key || trackedKeys.has(target.key)) continue;
       counts.set(target.key, (counts.get(target.key) ?? 0) + target.count);
       const list = contributions.get(target.key) ?? [];
-      list.push({ source: src.key, active: src.phase === 'active' });
+      list.push({ source: src.key, actor: src.source, count: target.count, active: src.phase === 'active' });
       contributions.set(target.key, list);
     }
   }
@@ -68,6 +74,10 @@ export function buildRows(i: ModelInput): ViewRow[] {
   for (const [key, count] of counts) {
     const contribs = contributions.get(key) ?? [];
     const active = contribs.some((c) => c.active);
+    // a file referenced from both users' files is listed once, under the user whose files reference it most (ties: you)
+    const byActor = { you: 0, external: 0 };
+    for (const c of contribs) byActor[c.actor] += c.count;
+    const actor: EditSource = byActor.external > byActor.you ? 'external' : 'you';
     const intensity = active ? referenceIntensity(count, i.sensitivity) : 0;
     const d = toDisplayPath(key, i.roots);
     const names: string[] = [];
@@ -82,6 +92,7 @@ export function buildRows(i: ModelInput): ViewRow[] {
       dir: d.dir,
       folderPath: d.folderPath,
       role: 'referenced',
+      actor,
       source: null,
       phase: active ? 'active' : 'idle',
       intensity,

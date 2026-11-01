@@ -24,7 +24,7 @@ function near(actual: number, expected: number, tol = 1e-3): void {
 }
 
 describe('ActivityTracker: options and record validation', () => {
-  it('defaults are 3000 / 2500 / 4000 / 40 / 1 / false', () => {
+  it('defaults are 3000 / 2500 / 4000 / 40 / 1 / false / false (persistence is off in the tracker, on in the config)', () => {
     assert.deepEqual(DEFAULT_TRACKER_OPTIONS, {
       windowMs: 3000,
       idleTimeoutMs: 2500,
@@ -32,6 +32,7 @@ describe('ActivityTracker: options and record validation', () => {
       maxFiles: 40,
       sensitivity: 1,
       showWhenIdle: false,
+      persist: false,
     });
   });
 
@@ -614,5 +615,162 @@ describe('ActivityTracker: clock regression and memory bounds', () => {
     const f = must(tracker.get(A));
     assert.equal(f.editCount, 10_000);
     assert.ok(f.rate <= (K.MAX_EVENTS_PER_FILE / (K.MIN_SPAN_MS / 1000)) + 1e-6, `rate ${f.rate}`);
+  });
+});
+
+// ----------------------------------------------------------------------------------------------
+// persist mode: each user's files stay until that user moves on
+// ----------------------------------------------------------------------------------------------
+
+describe('ActivityTracker: persist mode (a user\'s files stay until that user moves on)', () => {
+  const IDLE = DEFAULT_TRACKER_OPTIONS.idleTimeoutMs; // 2500
+  const keys = (t: ActivityTracker): string[] => t.snapshot().map((f) => f.key).sort();
+  const type = (t: ActivityTracker, key: string, source: 'you' | 'external' = 'you'): void => {
+    t.record({ key, source, weight: 1 });
+  };
+
+  it('an idle file is NOT removed by time, however long it has been quiet (it only stops shaking)', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(IDLE + K.RETAIN_AFTER_IDLE_MS + 60_000);
+    const f = must(tracker.get(A));
+    assert.equal(f.phase, 'idle');
+    assert.equal(f.intensity, 0);
+    assert.deepEqual(keys(tracker), [A]);
+  });
+
+  it('with persist off the same file is removed after idle + retain (the timed behaviour is unchanged)', () => {
+    const { clock, tracker } = setup({ persist: false });
+    type(tracker, A);
+    clock.advance(IDLE + K.RETAIN_AFTER_IDLE_MS);
+    assert.deepEqual(keys(tracker), []);
+  });
+
+  it('moving to a different file replaces the idle one: the new file comes, the old one goes', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(IDLE + 1);
+    type(tracker, B);
+    assert.deepEqual(keys(tracker), [B]);
+  });
+
+  it('files touched while another is still active are shown together', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(500);
+    type(tracker, B);
+    clock.advance(500);
+    type(tracker, C);
+    assert.deepEqual(keys(tracker), [A, B, C]);
+    clock.advance(IDLE + 1);
+    assert.deepEqual(keys(tracker), [A, B, C], 'all three are idle together, so the whole group persists');
+  });
+
+  it('when one file of the group goes quiet while another keeps going, the quiet one goes', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(1000);
+    type(tracker, B);
+    assert.deepEqual(keys(tracker), [A, B]);
+    clock.advance(1600); // A idle (2600 ms), B active (1600 ms)
+    type(tracker, B);
+    assert.deepEqual(keys(tracker), [B]);
+  });
+
+  it('the superseded file is also dropped by a snapshot alone (no new edit needed)', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(1000);
+    type(tracker, B);
+    clock.advance(1600);
+    assert.equal(must(tracker.get(A)).phase, 'idle');
+    assert.deepEqual(keys(tracker), [B]);
+  });
+
+  it('you and external are separate users: one moving on never removes the other\'s file', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A, 'you');
+    type(tracker, B, 'external');
+    clock.advance(IDLE + 1);
+    type(tracker, C, 'external'); // the external user moves from B to C
+    assert.deepEqual(keys(tracker), [A, C]);
+    assert.equal(must(tracker.get(A)).source, 'you');
+    clock.advance(IDLE + 1);
+    type(tracker, '/ws/d.ts', 'you'); // you move from A to d
+    assert.deepEqual(keys(tracker), [C, '/ws/d.ts']);
+  });
+
+  it('re-editing the same idle file keeps it (it is not "moving on")', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(IDLE + 1);
+    type(tracker, A);
+    assert.deepEqual(keys(tracker), [A]);
+    assert.equal(must(tracker.get(A)).phase, 'active');
+  });
+
+  it('a file whose writer changes belongs to the new user from then on', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A, 'you');
+    clock.advance(IDLE + 1);
+    type(tracker, B, 'external');
+    type(tracker, A, 'external'); // A is now written by the external user, together with B
+    assert.deepEqual(keys(tracker), [A, B]);
+    assert.equal(must(tracker.get(A)).source, 'external');
+  });
+
+  describe('release(source)', () => {
+    it('removes that user\'s idle files at once and leaves the other user alone', () => {
+      const { clock, tracker } = setup({ persist: true });
+      type(tracker, A, 'you');
+      type(tracker, B, 'external');
+      clock.advance(IDLE + 1);
+      assert.equal(tracker.release('you'), 1);
+      assert.deepEqual(keys(tracker), [B]);
+    });
+
+    it('an active file is kept until it turns idle, then it goes', () => {
+      const { clock, tracker } = setup({ persist: true });
+      type(tracker, A);
+      clock.advance(1000);
+      assert.equal(tracker.release('you'), 0, 'nothing was idle yet');
+      assert.deepEqual(keys(tracker), [A], 'still shaking, still shown');
+      clock.advance(IDLE);
+      assert.deepEqual(keys(tracker), []);
+    });
+
+    it('typing in a released file again un-releases it', () => {
+      const { clock, tracker } = setup({ persist: true });
+      type(tracker, A);
+      tracker.release('you');
+      clock.advance(1000);
+      type(tracker, A);
+      clock.advance(IDLE + 1);
+      assert.deepEqual(keys(tracker), [A], 'back in use, so it persists again');
+    });
+
+    it('is a no-op for a user with no files', () => {
+      const { tracker } = setup({ persist: true });
+      assert.equal(tracker.release('external'), 0);
+      assert.equal(tracker.size, 0);
+    });
+  });
+
+  it('maxFiles still bounds the number of persisted files', () => {
+    const { clock, tracker } = setup({ persist: true, maxFiles: 5 });
+    for (let i = 0; i < 12; i++) {
+      type(tracker, `/ws/f${i}.ts`);
+      clock.advance(10);
+    }
+    assert.ok(tracker.size <= 5);
+  });
+
+  it('turning persist off lets the normal expiry apply again', () => {
+    const { clock, tracker } = setup({ persist: true });
+    type(tracker, A);
+    clock.advance(IDLE + K.RETAIN_AFTER_IDLE_MS + 1000);
+    assert.deepEqual(keys(tracker), [A]);
+    tracker.setOptions({ persist: false });
+    assert.deepEqual(keys(tracker), []);
   });
 });

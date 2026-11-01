@@ -2,7 +2,7 @@ import { K } from '../core/constants';
 import { round3 } from '../core/intensity';
 import { parseHostMessage } from '../core/protocol';
 import type { WebviewMessage } from '../core/protocol';
-import { buildTree } from '../core/tree';
+import { buildActorTree } from '../core/tree';
 import type { FolderNode, TreeNode } from '../core/tree';
 import type { Snapshot, ViewRow } from '../core/types';
 
@@ -30,7 +30,7 @@ export interface App {
   readonly lastSeq: number;
 }
 
-const EMPTY_TEXT = 'No files are being edited. Type in a file, or let a tool change one, and it will show up here.';
+const EMPTY_TEXT = 'No files are being edited. Type in a file, or let a tool change one, and it will show up here under "You" or "External".';
 const DISABLED_TEXT = "File Shake is turned off. Use the toggle in this view's title bar to turn it back on.";
 
 function defaultEnv(doc: Document): AppEnv {
@@ -197,6 +197,7 @@ export function mountApp(root: HTMLElement, host: HostApi, envOverride: Partial<
     el.className = 'fs-folder';
     el.setAttribute('role', 'treeitem');
     el.setAttribute('data-folder-id', node.id);
+    if (node.actor !== undefined) el.setAttribute('data-actor', node.actor);
     const toggle = doc.createElement('button');
     toggle.className = 'fs-folder-toggle';
     toggle.setAttribute('type', 'button');
@@ -347,7 +348,7 @@ export function mountApp(root: HTMLElement, host: HostApi, envOverride: Partial<
       return;
     }
 
-    const nodes = buildTree(snapshot.rows);
+    const nodes = buildActorTree(snapshot.rows);
     const seen = new Set<string>();
     const seenFolders = new Set<string>();
 

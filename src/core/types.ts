@@ -37,6 +37,8 @@ export interface ViewRow {
   dir: string;
   folderPath: string[];
   role: Role;
+  /** which "user" this row is shown under: the writer of an edited row, or the writer whose file references a yellow row */
+  actor: EditSource;
   /** null for referenced rows */
   source: EditSource | null;
   phase: Phase;

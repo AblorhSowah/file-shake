@@ -297,3 +297,67 @@ describe('buildRows: maxFiles trimming', () => {
     assert.equal(rows.length, 10);
   });
 });
+
+describe('buildRows: which user a row belongs to (actor)', () => {
+  it('an edited row is listed under the user who wrote it', () => {
+    const rows = buildRows(
+      input([trackedFile('/ws/mine.ts', { source: 'you' }), trackedFile('/ws/theirs.ts', { source: 'external' })]),
+    );
+    assert.equal(byId(rows, '/ws/mine.ts').actor, 'you');
+    assert.equal(byId(rows, '/ws/theirs.ts').actor, 'external');
+  });
+
+  it('a yellow row follows the user whose file references it', () => {
+    const rows = buildRows(
+      input(
+        [trackedFile('/ws/mine.ts', { source: 'you' }), trackedFile('/ws/theirs.ts', { source: 'external' })],
+        [
+          refResult('/ws/mine.ts', [{ key: '/ws/a.ts', count: 2 }]),
+          refResult('/ws/theirs.ts', [{ key: '/ws/b.ts', count: 3 }]),
+        ],
+      ),
+    );
+    assert.equal(byId(rows, '/ws/a.ts').actor, 'you');
+    assert.equal(byId(rows, '/ws/b.ts').actor, 'external');
+  });
+
+  it('a file referenced by both users is one row, under the user with more references; a tie goes to you', () => {
+    const tracked = [trackedFile('/ws/mine.ts', { source: 'you' }), trackedFile('/ws/theirs.ts', { source: 'external' })];
+    const more = buildRows(
+      input(tracked, [
+        refResult('/ws/mine.ts', [{ key: '/ws/shared.ts', count: 1 }]),
+        refResult('/ws/theirs.ts', [{ key: '/ws/shared.ts', count: 4 }]),
+      ]),
+    );
+    assert.equal(more.filter((r) => r.id === '/ws/shared.ts').length, 1);
+    assert.equal(byId(more, '/ws/shared.ts').actor, 'external');
+    assert.equal(byId(more, '/ws/shared.ts').refCount, 5, 'counts from both users are still summed');
+    const tie = buildRows(
+      input(tracked, [
+        refResult('/ws/mine.ts', [{ key: '/ws/shared.ts', count: 2 }]),
+        refResult('/ws/theirs.ts', [{ key: '/ws/shared.ts', count: 2 }]),
+      ]),
+    );
+    assert.equal(byId(tie, '/ws/shared.ts').actor, 'you');
+  });
+
+  it('the cap on analysed sources applies to each user separately', () => {
+    const external = Array.from({ length: K.MAX_REFERENCE_SOURCES + 2 }, (_, i) =>
+      trackedFile(`/ws/e${i}.ts`, { source: 'external', lastEditAt: 5000 + i }),
+    );
+    const mine = trackedFile('/ws/mine.ts', { source: 'you', lastEditAt: 1 }); // the oldest of all
+    const rows = buildRows(
+      input([mine, ...external], [refResult('/ws/mine.ts', [{ key: '/ws/dep.ts', count: 1 }])]),
+    );
+    assert.ok(rows.some((r) => r.id === '/ws/dep.ts'), 'your reference is not crowded out by the other user\'s many files');
+  });
+
+  it('idle files keep their references when showWhenIdle is on (this is how persistence keeps yellow rows)', () => {
+    const tracked = [trackedFile('/ws/mine.ts', { source: 'you', phase: 'idle', intensity: 0 })];
+    const refs = [refResult('/ws/mine.ts', [{ key: '/ws/dep.ts', count: 2 }])];
+    assert.equal(buildRows(input(tracked, refs, { showWhenIdle: false })).some((r) => r.id === '/ws/dep.ts'), false);
+    const kept = buildRows(input(tracked, refs, { showWhenIdle: true }));
+    assert.equal(byId(kept, '/ws/dep.ts').phase, 'idle');
+    assert.equal(byId(kept, '/ws/dep.ts').intensity, 0);
+  });
+});

@@ -1,4 +1,4 @@
-import type { FileKey, Role, ViewRow } from './types';
+import type { EditSource, FileKey, Role, ViewRow } from './types';
 
 export interface FolderNode {
   kind: 'folder';
@@ -8,6 +8,8 @@ export interface FolderNode {
   fileCount: number;
   topRole: Role | null;
   hasActive: boolean;
+  /** only on the two top-level sections ("You", "External") built by `buildActorTree` */
+  actor?: EditSource;
 }
 
 export interface FileNode {
@@ -32,7 +34,7 @@ function collator(a: string, b: string): number {
   return a.localeCompare(b, 'en', { numeric: true });
 }
 
-function convert(raw: Raw, label: string, segments: string[]): FolderNode {
+function convert(raw: Raw, label: string, segments: string[], idPrefix: string): FolderNode {
   // compaction: a folder whose only child is a single folder merges with it
   let cur = raw;
   let lbl = label;
@@ -45,7 +47,7 @@ function convert(raw: Raw, label: string, segments: string[]): FolderNode {
   }
 
   const children: TreeNode[] = [];
-  const folders = [...cur.folders.values()].map((f) => convert(f, f.segments[f.segments.length - 1] as string, f.segments));
+  const folders = [...cur.folders.values()].map((f) => convert(f, f.segments[f.segments.length - 1] as string, f.segments, idPrefix));
   folders.sort((a, b) => collator(a.label, b.label));
   children.push(...folders);
   const files = [...cur.files].sort((a, b) => collator(a.name, b.name) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -67,7 +69,7 @@ function convert(raw: Raw, label: string, segments: string[]): FolderNode {
   }
   return {
     kind: 'folder',
-    id: segs.join('/'),
+    id: idPrefix + segs.join('/'),
     label: lbl,
     children,
     fileCount,
@@ -76,8 +78,11 @@ function convert(raw: Raw, label: string, segments: string[]): FolderNode {
   };
 }
 
-/** Compact folder tree of the given rows, alphabetical (never by intensity, so shaking rows do not jump). */
-export function buildTree(rows: readonly ViewRow[]): TreeNode[] {
+/**
+ * Compact folder tree of the given rows, alphabetical (never by intensity, so shaking rows do not jump).
+ * `idPrefix` is put in front of every folder id so two trees in one view never share an id.
+ */
+export function buildTree(rows: readonly ViewRow[], idPrefix = ''): TreeNode[] {
   const root = newRaw([]);
   for (const row of rows) {
     let node = root;
@@ -95,10 +100,44 @@ export function buildTree(rows: readonly ViewRow[]): TreeNode[] {
   }
 
   const top: TreeNode[] = [];
-  const folders = [...root.folders.values()].map((f) => convert(f, f.segments[0] as string, f.segments));
+  const folders = [...root.folders.values()].map((f) => convert(f, f.segments[0] as string, f.segments, idPrefix));
   folders.sort((a, b) => collator(a.label, b.label));
   top.push(...folders);
   const files = [...root.files].sort((a, b) => collator(a.name, b.name) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const row of files) top.push({ kind: 'file', id: row.id, row });
   return top;
+}
+
+/** The two "users" of the view, in display order. */
+export const ACTORS: readonly EditSource[] = ['you', 'external'];
+
+export const ACTOR_LABEL: Readonly<Record<EditSource, string>> = {
+  you: 'You · typing',
+  external: 'External · Claude, git, tools',
+};
+
+/**
+ * One top-level section per user that has rows ("You" first, then "External"), each holding that user's
+ * folder tree. The sections are ordinary folder nodes (collapse, counts and auto-expand work unchanged);
+ * their ids are `@you` / `@external`, which cannot clash with a path segment.
+ */
+export function buildActorTree(rows: readonly ViewRow[]): TreeNode[] {
+  const out: TreeNode[] = [];
+  for (const actor of ACTORS) {
+    const mine = rows.filter((r) => r.actor === actor);
+    if (mine.length === 0) continue;
+    const id = `@${actor}`;
+    const children = buildTree(mine, `${id}/`);
+    out.push({
+      kind: 'folder',
+      id,
+      label: ACTOR_LABEL[actor],
+      children,
+      fileCount: mine.length,
+      topRole: mine.some((r) => r.role === 'edited') ? 'edited' : 'referenced',
+      hasActive: mine.some((r) => r.phase === 'active'),
+      actor,
+    });
+  }
+  return out;
 }

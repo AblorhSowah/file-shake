@@ -4,7 +4,9 @@ Make file activity visible. File Shake watches which file is being changed, whet
 
 - the file being edited is **green** and **shakes** in proportion to how fast it is being changed;
 - the files that file **references** (imports, requires, includes) turn **yellow** and shake in proportion to **how many times they are referenced** from it;
-- both show up in a compact **File Shake** tree in the Explorer sidebar, folders expanded down to each file, and are tinted in the real Explorer tree too.
+- both show up in a compact **File Shake** tree in the Explorer sidebar, folders expanded down to each file, and are tinted in the real Explorer tree too;
+- the tree has two sections, like two different people working in your project: **You** (typing in the editor) and **External** (Claude Code, git, a formatter, a build tool), each with its own files and its own yellow references;
+- rows **stay on screen** after they stop shaking, until whoever changed them moves on to a different file (see "Who is who, and how long rows stay").
 
 Everything is configurable (`fileShake.*`), respects `prefers-reduced-motion`, and works in light, dark and high-contrast themes.
 
@@ -21,14 +23,14 @@ npm ci
 npm run package
 ```
 
-This creates `file-shake-0.1.0.vsix` (about 52 KB) in the project folder.
+This creates `file-shake-0.2.0.vsix` (about 52 KB) in the project folder.
 
 **2. Install it**
 
 From a terminal:
 
 ```bash
-code --install-extension file-shake-0.1.0.vsix
+code --install-extension file-shake-0.2.0.vsix
 ```
 
 If the `code` command is not found, open the Command Palette in VS Code and run **Shell Command: Install 'code' command in PATH**, then try again.
@@ -43,6 +45,21 @@ Run **Developer: Reload Window** from the Command Palette, open a project folder
 
 **Uninstall:** `code --uninstall-extension file-shake.file-shake`, or use the Extensions view.
 
+## Who is who, and how long rows stay
+
+File Shake treats the two kinds of writer as two different users and keeps a separate list for each. A row stays visible, dimmed and not shaking, after its file goes quiet. It leaves when its user moves on.
+
+| User | A file appears when | It stays until |
+|---|---|---|
+| **You** (`●`) | you type in it | you switch to a different file in the editor, or the VS Code window loses focus; the next file you type in then takes its place |
+| **External** (`◆`) | something other than your typing changes it | the same kind of writer changes a different file; that file takes its place |
+
+Files changed at the same time stay together: several files that are active together (an agent writing three files at once, say) are all shown, and all stay when the writer goes quiet. When one of them goes quiet while another keeps going, the quiet one goes. A file of yours that you switch away from while it is still shaking finishes shaking and then leaves.
+
+Each user's yellow rows are the files referenced by that user's current files, so they persist and move with them. Clicking a row in the File Shake view does not count as you switching files. Opening a file does not make it appear; only changing it does.
+
+Turn all of this off with `fileShake.persistUntilNextFile: false`. Idle files are then removed a few seconds after they stop (or kept with `fileShake.showWhenIdle`).
+
 ## What it can and cannot do (please read)
 
 These are limits of the VS Code extension API and of static analysis, not bugs. File Shake is built around them instead of pretending otherwise.
@@ -54,7 +71,7 @@ These are limits of the VS Code extension API and of static analysis, not bugs. 
 3. **Colours.** Native decorations can only use contributed theme colours, so to change the Explorer colours override `fileShake.editedForeground` and `fileShake.referencedForeground` in `workbench.colorCustomizations`. The settings `fileShake.colors.edited` / `fileShake.colors.referenced` (empty = follow the theme) change **the File Shake view only**. Defaults: green `#3fb950`, yellow `#e3b341` (darker tones in light themes for contrast).
 4. **File Shake cannot tell "Claude" from other writers.** The API does not say who wrote a file. It distinguishes *typing in the focused editor* (`you`) from *any other change* (`external`): Claude Code, git checkout/pull, formatters, code generators, build tools, other extensions, sync clients. The label is `external`, never "Claude".
 5. **Reference counts are heuristic.** References are found with a fast token scan (not a full parser or type checker), so shadowed names, same-package references in Go/Java, bundler aliases and package `exports` are not understood. See "How references are counted".
-6. **Yellow only shows while you are editing.** Yellow rows exist while a source file is active (or with `fileShake.showWhenIdle`); merely focusing or opening a file does not surface its references.
+6. **Yellow only follows files that were changed.** Yellow rows exist for the files a changed file references, while it is active and, with `fileShake.persistUntilNextFile` (the default) or `fileShake.showWhenIdle`, after it goes quiet; merely focusing or opening a file does not surface its references.
 
 ## How "you" versus "external" is decided
 
@@ -110,7 +127,8 @@ Analysis never blocks the extension host: it is debounced (400 ms after the last
 | `fileShake.excludeGlobs` | build output, `node_modules`, `.git`, lock files, … | Files that are never tracked or shown as references. |
 | `fileShake.colors.edited` / `fileShake.colors.referenced` | `""` | View colours (`#rgb`, `#rrggbb`, `#rrggbbaa`); empty follows the theme. Webview only (see limit 3). |
 | `fileShake.sensitivity` | `1` | 0.25-4; higher shakes harder for the same activity. |
-| `fileShake.showWhenIdle` | `false` | Keep idle files and their references listed. |
+| `fileShake.persistUntilNextFile` | `true` | Keep each user's files on screen after they stop shaking, until that user moves to a different file (see above). |
+| `fileShake.showWhenIdle` | `false` | Keep idle files and their references listed even when `persistUntilNextFile` is off. |
 | `fileShake.decorateFolders` | `true` | Tint parent folders of active files in the Explorer. |
 | `fileShake.detectExternalEdits` | `true` | Track changes that are not typing and label them `external`. |
 | `fileShake.maxFileSizeKb` | `512` | Larger files are tracked but not scanned for references. |

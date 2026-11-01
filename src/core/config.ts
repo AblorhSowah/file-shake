@@ -14,6 +14,8 @@ export interface FileShakeConfig {
   referencedColor: string;
   sensitivity: number;
   showWhenIdle: boolean;
+  /** keep each user's current files on screen until that user moves to a different file */
+  persistUntilNextFile: boolean;
   decorateFolders: boolean;
   detectExternalEdits: boolean;
   maxFileSizeKb: number;
@@ -51,6 +53,7 @@ export const DEFAULT_CONFIG: FileShakeConfig = {
   referencedColor: '',
   sensitivity: 1,
   showWhenIdle: false,
+  persistUntilNextFile: true,
   decorateFolders: true,
   detectExternalEdits: true,
   maxFileSizeKb: 512,
@@ -92,6 +95,7 @@ export function sanitizeConfig(raw: Readonly<Record<string, unknown>>): FileShak
       referencedColor: color(r['referencedColor']),
       sensitivity: num(r['sensitivity'], d.sensitivity, 0.25, 4, false),
       showWhenIdle: bool(r['showWhenIdle'], d.showWhenIdle),
+      persistUntilNextFile: bool(r['persistUntilNextFile'], d.persistUntilNextFile),
       decorateFolders: bool(r['decorateFolders'], d.decorateFolders),
       detectExternalEdits: bool(r['detectExternalEdits'], d.detectExternalEdits),
       maxFileSizeKb: num(r['maxFileSizeKb'], d.maxFileSizeKb, 16, 4096, true),
@@ -110,5 +114,6 @@ export function toTrackerOptions(c: FileShakeConfig): TrackerOptions {
     maxFiles: c.maxFiles,
     sensitivity: c.sensitivity,
     showWhenIdle: c.showWhenIdle,
+    persist: c.persistUntilNextFile,
   };
 }

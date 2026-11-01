@@ -7,7 +7,7 @@ import { ShakeDecorationProvider } from './vscode/decorationProvider';
 import { EditWatcher } from './vscode/editWatcher';
 import { ShakeViewProvider } from './vscode/shakeViewProvider';
 import { StatusBar } from './vscode/statusBar';
-import { getRoots } from './vscode/uriKey';
+import { fileKeyFromUri, getRoots } from './vscode/uriKey';
 
 export interface FileShakeApi {
   readonly apiVersion: 1;
@@ -30,6 +30,10 @@ export interface FileShakeApi {
     viewStats(): { resolved: number; ready: number; sent: number; visible: boolean };
     /** timers still pending on the (single, shared) ManualScheduler: tick chain, reference debounces, save/dirty-settle timers */
     pendingTimers(): number;
+    /** same as the VS Code window gaining (true) or losing (false) focus; the real window state is ignored in test mode */
+    windowFocusChanged(focused: boolean): void;
+    /** same as clicking the row of `key` (a file key) in the File Shake view, just before the file opens */
+    noteOpenedFromView(key: string): void;
   };
 }
 
@@ -110,6 +114,12 @@ export function activate(context: vscode.ExtensionContext): FileShakeApi {
       controller.applyConfig();
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => controller.onRootsChanged()),
+    // "you" persist until you move to another file or leave the window
+    vscode.window.onDidChangeActiveTextEditor((editor) =>
+      controller.onActiveEditorChanged(editor ? fileKeyFromUri(editor.document.uri) : undefined),
+    ),
+    // test mode runs on a fake clock and a pretend window focus; the real window state would make runs depend on the desktop
+    ...(testMode ? [] : [vscode.window.onDidChangeWindowState((state) => controller.onWindowFocusChanged(state.focused))]),
     vscode.commands.registerCommand('fileShake.toggle', () => toggleEnabled()),
     vscode.commands.registerCommand('fileShake.clear', () => controller.clear()),
     vscode.commands.registerCommand('fileShake.focusView', () => vscode.commands.executeCommand('fileShake.view.focus')),
@@ -119,6 +129,8 @@ export function activate(context: vscode.ExtensionContext): FileShakeApi {
       output.show(true);
     }),
   );
+
+  view.onOpenRow = (id) => controller.noteOpenedFromView(id);
 
   // publish the initial (empty) model: no file IO, no timers
   controller.refresh();
@@ -149,6 +161,8 @@ export function activate(context: vscode.ExtensionContext): FileShakeApi {
             },
             viewStats: () => view.stats(),
             pendingTimers: (): number => manual.pending,
+            windowFocusChanged: (focused: boolean): void => controller.onWindowFocusChanged(focused),
+            noteOpenedFromView: (key: string): void => controller.noteOpenedFromView(key),
           },
         }
       : {}),

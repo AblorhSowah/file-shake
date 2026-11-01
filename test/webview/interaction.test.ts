@@ -90,7 +90,7 @@ describe('webview: collapsing folders', () => {
     assert.equal(folder.getAttribute('aria-expanded'), 'true');
     click(toggleOf('src'));
     assert.equal(folder.getAttribute('aria-expanded'), 'false');
-    assert.deepEqual(h.host.lastCollapsed, ['src']);
+    assert.deepEqual(h.host.lastCollapsed, ['@you/src']);
     click(toggleOf('src'));
     assert.equal(folder.getAttribute('aria-expanded'), 'true');
     assert.deepEqual(h.host.lastCollapsed, []);
@@ -119,7 +119,7 @@ describe('webview: collapsing folders', () => {
     click(toggleOf('src'));
     assert.equal(must(folderById(h.root, 'src')).getAttribute('aria-expanded'), 'false');
     assert.equal(must(folderById(h.root, 'lib')).getAttribute('aria-expanded'), 'true');
-    assert.deepEqual(h.host.lastCollapsed, ['src']);
+    assert.deepEqual(h.host.lastCollapsed, ['@you/src']);
   });
 
   it('updates to files that are already known do not re-expand a collapsed folder', () => {
@@ -127,7 +127,7 @@ describe('webview: collapsing folders', () => {
     h.sendRows([inSrc('a.ts')]);
     click(toggleOf('src'));
     h.sendRows([inSrc('a.ts', { intensity: 0.9 })]);
-    h.sendRows([inSrc('a.ts', { intensity: 0.3, badge: 'external', source: 'external' })]);
+    h.sendRows([inSrc('a.ts', { intensity: 0.3, badge: 'typing', phase: 'idle' })]);
     assert.equal(must(folderById(h.root, 'src')).getAttribute('aria-expanded'), 'false');
   });
 
@@ -135,7 +135,7 @@ describe('webview: collapsing folders', () => {
     h = mount();
     h.sendRows([inSrc('a.ts')]);
     click(toggleOf('src'));
-    assert.deepEqual(h.host.lastCollapsed, ['src']);
+    assert.deepEqual(h.host.lastCollapsed, ['@you/src']);
     h.sendRows([inSrc('a.ts'), inSrc('b.ts')]);
     assert.equal(must(folderById(h.root, 'src')).getAttribute('aria-expanded'), 'true');
     assert.deepEqual(h.host.lastCollapsed, []);
@@ -151,7 +151,7 @@ describe('webview: collapsing folders', () => {
   });
 
   it('collapsed ids are read from the persisted webview state at mount time', () => {
-    h = mount({ state: { collapsed: ['src'] } });
+    h = mount({ state: { collapsed: ['@you/src'] } });
     h.sendRows([inSrc('a.ts')]);
     // The first snapshot is allowed to expand a folder whose files are "new", but the state must have been
     // consulted: toggling once from the persisted state must yield a consistent written state.

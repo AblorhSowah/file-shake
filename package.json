@@ -1,7 +1,7 @@
 {
   "name": "file-shake",
   "displayName": "File Shake",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "file-shake",
   "description": "See which files are being edited, live: green for the file being changed, yellow for the files it references, shaking in proportion to activity.",
   "license": "MIT",
@@ -208,6 +208,12 @@
           "default": false,
           "scope": "window",
           "markdownDescription": "Keep idle files (and the files they reference) listed after activity stops, instead of removing them a few seconds after they go idle."
+        },
+        "fileShake.persistUntilNextFile": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "markdownDescription": "Keep a file (and the files it references) on screen after it stops shaking, until the same user moves on. Your file stays until you switch to another file or leave the window. A file changed by something else (Claude, git, a tool) stays until that something changes a different file. Files changed at the same time are all shown. Turn this off to remove idle files a few seconds after they stop."
         },
         "fileShake.decorateFolders": {
           "type": "boolean",

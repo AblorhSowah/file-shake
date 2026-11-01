@@ -5,26 +5,7 @@ import * as vscode from 'vscode';
 import type { FileShakeApi } from '../../../src/extension';
 import { K } from '../../../src/core/constants';
 import { referenceIntensity } from '../../../src/core/intensity';
-import {
-  colorIdOf,
-  decorationOf,
-  envPath,
-  getApi,
-  keyOf,
-  logFor,
-  must,
-  openDoc,
-  resetConfig,
-  resetState,
-  rowOf,
-  settleRefs,
-  testing,
-  trackedOf,
-  typeAndWait,
-  typeInto,
-  waitUntil,
-  workspaceDir,
-} from './helpers';
+import { colorIdOf, decorationOf, envPath, getApi, keyOf, logFor, must, openDoc, resetConfig, resetState, rowOf, setConfig, settleRefs, testing, trackedOf, typeAndWait, typeInto, waitUntil, workspaceDir } from './helpers';
 
 suite('Editing a file (single-root workspace)', () => {
   let api: FileShakeApi;
@@ -177,6 +158,7 @@ suite('Editing a file (single-root workspace)', () => {
 
   test('idle: the row goes idle at exactly idleTimeoutMs, the decoration and the yellow rows disappear, the row is removed after the retain period', async function () {
     this.timeout(60_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     const a = p('a.ts');
     await typeAndWait(api, await openDoc(a));
     await settleRefs(api);

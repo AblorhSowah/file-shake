@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { folderById, folderEls, mount, rowById, rowEls, text } from '../support/dom';
+import { actorEls, click, folderById, folderEls, mount, rowById, rowEls, text, treeOf } from '../support/dom';
 import type { Harness } from '../support/dom';
 import { snapshotOf, viewRow } from '../support/builders';
 import { must } from '../support/fixtures';
@@ -139,11 +139,10 @@ describe('webview: DOM contract for rows', () => {
     assert.ok(exposed.includes('3 edits') || exposed.includes('a.ts'), exposed);
   });
 
-  it('root-level files sit directly in ul.fs-tree', () => {
+  it('root-level files sit directly in their user\'s section list', () => {
     h = mount();
     h.sendRows([viewRow('/ws/top.ts', { folderPath: [], dir: '' })]);
-    const tree = must(h.root.querySelector('ul.fs-tree'));
-    assert.equal(must(rowById(h.root, '/ws/top.ts')).parentElement, tree);
+    assert.equal(must(rowById(h.root, '/ws/top.ts')).parentElement, must(treeOf(h.root, 'you')));
   });
 });
 
@@ -282,11 +281,11 @@ describe('webview: folders and tree layout', () => {
       viewRow('/ws/zdir/x.ts', { folderPath: ['zdir'], dir: 'zdir' }),
     ];
     h.sendRows(rows('a'));
-    const order = (): string[] => [...must(h?.root.querySelector('ul.fs-tree')).children].map((c) => c.getAttribute('data-folder-id') ?? c.getAttribute('data-id') ?? '?');
-    assert.deepEqual(order(), ['zdir', '/ws/a.ts', '/ws/b.ts']);
+    const order = (): string[] => [...must(h && treeOf(h.root, 'you')).children].map((c) => c.getAttribute('data-folder-id') ?? c.getAttribute('data-id') ?? '?');
+    assert.deepEqual(order(), ['@you/zdir', '/ws/a.ts', '/ws/b.ts']);
     const nodeA = rowById(h.root, '/ws/a.ts');
     h.sendRows(rows('b'));
-    assert.deepEqual(order(), ['zdir', '/ws/a.ts', '/ws/b.ts']);
+    assert.deepEqual(order(), ['@you/zdir', '/ws/a.ts', '/ws/b.ts']);
     assert.equal(rowById(h.root, '/ws/a.ts'), nodeA, 'the same DOM node is reused');
   });
 
@@ -392,5 +391,70 @@ describe('webview: snapshot sequencing', () => {
     h.send(snapshotOf([], { seq: 10, enabled: false }));
     h.send(snapshotOf([viewRow('/ws/a.ts')], { seq: 4, enabled: true }));
     assert.equal(h.root.getAttribute('data-state'), 'disabled');
+  });
+});
+
+describe('webview: the two users (You and External)', () => {
+  it('rows are grouped into a "You" section and an "External" section, You first, each with its own count', () => {
+    h = mount();
+    h.sendRows([
+      viewRow('/ws/ext.ts', { source: 'external', badge: 'external', folderPath: [], dir: '' }),
+      viewRow('/ws/mine.ts', { folderPath: [], dir: '' }),
+      viewRow('/ws/mine2.ts', { folderPath: [], dir: '' }),
+    ]);
+    const sections = actorEls(h.root);
+    assert.deepEqual(sections.map((el) => el.getAttribute('data-actor')), ['you', 'external']);
+    assert.deepEqual(sections.map((el) => el.getAttribute('data-folder-id')), ['@you', '@external']);
+    assert.match(text(sections[0], ':scope > button span.fs-folder-label'), /^You/);
+    assert.match(text(sections[1], ':scope > button span.fs-folder-label'), /^External/);
+    assert.match(text(sections[0], ':scope > button span.fs-folder-count'), /\b2\b/);
+    assert.match(text(sections[1], ':scope > button span.fs-folder-count'), /\b1\b/);
+    assert.equal(must(rowById(h.root, '/ws/mine.ts')).parentElement, treeOf(h.root, 'you'));
+    assert.equal(must(rowById(h.root, '/ws/ext.ts')).parentElement, treeOf(h.root, 'external'));
+  });
+
+  it('a section exists only while its user has rows, and the empty-state text is not shown with rows', () => {
+    h = mount();
+    h.sendRows([viewRow('/ws/mine.ts', { folderPath: [], dir: '' })]);
+    assert.deepEqual(actorEls(h.root).map((el) => el.getAttribute('data-actor')), ['you']);
+    assert.equal(h.root.querySelector('.fs-empty'), null);
+  });
+
+  it('the same folder name under both users gives two distinct folders (ids are namespaced per user)', () => {
+    h = mount();
+    h.sendRows([
+      viewRow('/ws/src/a.ts', { folderPath: ['src'], dir: 'src' }),
+      viewRow('/ws/src/b.ts', { folderPath: ['src'], dir: 'src', source: 'external', badge: 'external' }),
+    ]);
+    const ids = folderEls(h.root).map((el) => el.getAttribute('data-folder-id')).sort();
+    assert.deepEqual(ids, ['@external/src', '@you/src']);
+    assert.equal(rowEls(h.root).length, 2);
+  });
+
+  it('a file that changes user moves to the other section and the emptied section disappears', () => {
+    h = mount();
+    h.sendRows([viewRow('/ws/x.ts', { folderPath: [], dir: '' })]);
+    assert.deepEqual(actorEls(h.root).map((el) => el.getAttribute('data-actor')), ['you']);
+    h.sendRows([viewRow('/ws/x.ts', { folderPath: [], dir: '', source: 'external', badge: 'external' })]);
+    assert.deepEqual(actorEls(h.root).map((el) => el.getAttribute('data-actor')), ['external']);
+    assert.equal(rowEls(h.root).length, 1);
+  });
+
+  it('a yellow row is listed under the user given by its actor, not by its (null) source', () => {
+    h = mount();
+    h.sendRows([
+      viewRow('/ws/ext.ts', { source: 'external', badge: 'external', folderPath: [], dir: '' }),
+      viewRow('/ws/dep.ts', { role: 'referenced', source: null, actor: 'external', badge: '×2 refs', refCount: 2, folderPath: [], dir: '' }),
+    ]);
+    assert.equal(must(rowById(h.root, '/ws/dep.ts')).parentElement, treeOf(h.root, 'external'));
+  });
+
+  it('a user section can be collapsed like a folder and the choice is persisted', () => {
+    h = mount();
+    h.sendRows([viewRow('/ws/mine.ts', { folderPath: [], dir: '' })]);
+    const section = must(actorEls(h.root)[0]);
+    click(must(section.querySelector(':scope > button.fs-folder-toggle')));
+    assert.equal(section.getAttribute('aria-expanded'), 'false');
+    assert.deepEqual(h.host.lastCollapsed, ['@you']);
   });
 });

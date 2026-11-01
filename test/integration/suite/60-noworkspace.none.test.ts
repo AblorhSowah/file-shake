@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import type { FileShakeApi } from '../../../src/extension';
-import { decorationOf, envPath, getApi, keyOf, logFor, must, openDoc, resetConfig, resetState, rowOf, settleRefs, testing, typeAndWait, waitUntil, colorIdOf } from './helpers';
+import { colorIdOf, decorationOf, envPath, getApi, keyOf, logFor, must, openDoc, resetConfig, resetState, rowOf, setConfig, settleRefs, testing, typeAndWait, waitUntil } from './helpers';
 
 suite('No folder open', () => {
   let api: FileShakeApi;
@@ -84,6 +84,7 @@ suite('No folder open', () => {
 
   test('idle clean-up works without a workspace', async function () {
     this.timeout(60_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     await typeAndWait(api, await openDoc(o1()));
     testing(api).advance(2500);
     assert.equal(must(rowOf(api, keyOf(o1()))).phase, 'idle');

@@ -17,6 +17,7 @@ export function readConfig(): FileShakeConfig {
     referencedColor: c.get('colors.referenced'),
     sensitivity: c.get('sensitivity'),
     showWhenIdle: c.get('showWhenIdle'),
+    persistUntilNextFile: c.get('persistUntilNextFile'),
     decorateFolders: c.get('decorateFolders'),
     detectExternalEdits: c.get('detectExternalEdits'),
     maxFileSizeKb: c.get('maxFileSizeKb'),

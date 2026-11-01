@@ -156,6 +156,7 @@ suite('Adversarial probes (single-root workspace)', () => {
 
   test('[QA-004] turning showWhenIdle off while a file is idle (inside the retain window) must schedule its removal, otherwise the row never goes away', async function () {
     this.timeout(90_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     await setConfig('showWhenIdle', true);
     const a = join(ws, 'a.ts');
     await typeAndWait(api, await openDoc(a));

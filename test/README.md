@@ -97,6 +97,6 @@ out of `tsc`, `eslint` and the `.vsix`.
 | `unit/manifest.test.ts` | 13: manifest, pinned toolchain, settings vs `core/config`, README honesty, icon, licence |
 | `unit/harness.test.ts` | the integration harness itself (env scrub, layouts, suite selection) |
 | `webview/render.test.ts`, `motion.test.ts`, `interaction.test.ts`, `security.test.ts`, `lifecycle.test.ts`, `css.test.ts` | 11, 12 (W rows) |
-| `unit/vsix.test.ts` | package audit of `file-shake-0.1.0.vsix` (run `npm run package` first): exact 10-file list, size, no maps, manifest, icon header, `require()` set, stub-`vscode` load of the bundle |
+| `unit/vsix.test.ts` | package audit of `file-shake-0.2.0.vsix` (run `npm run package` first): exact 10-file list, size, no maps, manifest, icon header, `require()` set, stub-`vscode` load of the bundle |
 | `unit/analyzeProperties.test.ts` | invariants of `analyzeReferences` over random trees and random import statements in 11 language families |
 | `integration/suite/*.test.ts` | 14 integration list, 12 (I rows) in a real VS Code. `70-scenarios` real-world scenarios (external processes, fan-out, rename/delete, floods, enable toggling, atomic replace), `75-adversarial` defect reproductions (`[QA-nnn]` tests FAIL until the defect is fixed), `76-folders.multi` folders added/removed at runtime, `80-performance` per-edit cost on the real adapters |

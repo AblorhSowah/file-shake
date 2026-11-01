@@ -118,6 +118,7 @@ suite('Real-world scenarios (single-root workspace)', () => {
 
   test('(c) three fast edits, then the file goes idle and disappears: row lifecycle edited -> idle -> removed', async function () {
     this.timeout(60_000);
+    await setConfig('persistUntilNextFile', false); // this test is about timed removal, which persistence replaces
     const a = join(ws, 'a.ts');
     const key = keyOf(a);
     const doc = await openDoc(a);
