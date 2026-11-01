@@ -70,7 +70,7 @@ Counting examples (1)-(4) of DESIGN 14 give 4/1, 3/3, 2, 5. Perf: 400 KB / 5000-
 - Test-side changes: `test/integration/suite/75-adversarial.single.test.ts` (QA-006 wait also accepts `burst`), `test/integration/suite/76-folders.multi.test.ts` (rewrites the probe file every 500 ms until the new folder's watcher is live; a single write raced VS Code's asynchronous watcher start and failed about half the time on the unmodified code too), `test/unit/activityTracker.test.ts` (`renameUnder` return value).
 
 ## Release checklist
-- `npm run lint`, `npm run test:unit` (1284), `FS_VSCODE_EXE=... npm run test:integration` and `FS_INSTALLED_VSIX=$PWD/file-shake-0.2.0.vsix ... node --import tsx test/integration/runTest.ts` (141 pass, 1 skipped) are green.
+- `npm run lint`, `npm run test:unit` (1322), `FS_VSCODE_EXE=... npm run test:integration` and `FS_INSTALLED_VSIX=$PWD/file-shake-0.2.0.vsix ... node --import tsx test/integration/runTest.ts` (154 pass, 1 skipped; the undo test in 10-editing depends on desktop focus and can fail if another window is in front while the suite runs) are green.
 - `npm run package` -> `file-shake-0.2.0.vsix` (10 files, about 52 KB). Local install: `code --install-extension file-shake-0.2.0.vsix`.
 - Not done: `vsce publish` / Open VSX. `package.json` still has placeholders: `publisher` is `file-shake` (must be a real Marketplace publisher id you own, and the extension id becomes `<publisher>.file-shake`) and `repository.url` is `https://github.com/OWNER/file-shake.git` (the package script passes `--allow-missing-repository` because of it). Publishing also needs a personal access token. Also not done: Windows/Linux runs, VS Code 1.85 floor run.
 
