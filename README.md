@@ -8,6 +8,41 @@ Make file activity visible. File Shake watches which file is being changed, whet
 
 Everything is configurable (`fileShake.*`), respects `prefers-reduced-motion`, and works in light, dark and high-contrast themes.
 
+## Install
+
+File Shake is not on the Marketplace yet, so you install it from a `.vsix` file that you build once. You need VS Code 1.85 or newer, plus Node.js and npm to build it (tested with Node 24).
+
+**1. Build the package**
+
+```bash
+git clone https://github.com/AblorhSowah/file-shake.git
+cd file-shake
+npm ci
+npm run package
+```
+
+This creates `file-shake-0.1.0.vsix` (about 52 KB) in the project folder.
+
+**2. Install it**
+
+From a terminal:
+
+```bash
+code --install-extension file-shake-0.1.0.vsix
+```
+
+If the `code` command is not found, open the Command Palette in VS Code and run **Shell Command: Install 'code' command in PATH**, then try again.
+
+Or from inside VS Code: open the Extensions view, click the `...` menu at the top, choose **Install from VSIX...**, and pick the file.
+
+**3. Reload and look for it**
+
+Run **Developer: Reload Window** from the Command Palette, open a project folder, and find **File Shake** in the Explorer sidebar. Start typing in a file and it turns green and shakes; the files it imports turn yellow.
+
+**Update:** pull the latest code, then run `npm ci`, `npm run package` and the install command again, and reload the window.
+
+**Uninstall:** `code --uninstall-extension file-shake.file-shake`, or use the Extensions view.
+
 ## What it can and cannot do (please read)
 
 These are limits of the VS Code extension API and of static analysis, not bugs. File Shake is built around them instead of pretending otherwise.
